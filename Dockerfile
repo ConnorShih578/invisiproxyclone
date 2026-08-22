@@ -1,4 +1,4 @@
-FROM node:26-alpine
+FROM node:22-alpine
 WORKDIR /app
 LABEL org.opencontainers.image.title="InvisiProxy LTS" \
       org.opencontainers.image.description="An effective, privacy-focused web proxy service" \
