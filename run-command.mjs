@@ -5,6 +5,7 @@ import {
   readdirSync,
   lstatSync,
   copyFileSync,
+  cpSync,
   rmSync,
   renameSync,
   existsSync,
@@ -135,9 +136,9 @@ commands: for (let i = 2; i < process.argv.length; i++)
     case 'build': {
       const distFinal = fileURLToPath(new URL('./views/dist', import.meta.url));
       const dist = fileURLToPath(new URL('./views/dist-new', import.meta.url));
-      rmSync(dist, { force: true, recursive: true });
-      rmSync(distFinal, { force: true, recursive: true });
-      mkdirSync(dist);
+      try { rmSync(dist, { force: true, recursive: true, maxRetries: 10, retryDelay: 150 }); } catch {}
+      try { rmSync(distFinal, { force: true, recursive: true, maxRetries: 10, retryDelay: 150 }); } catch {}
+      mkdirSync(dist, { recursive: true });
 
       /* The archive directory is excluded from this process, since source
        * rewrites are not intended to be used by any of those files.
@@ -284,8 +285,21 @@ commands: for (let i = 2; i < process.argv.length; i++)
         await compress('./views/dist-new/archive', true);
       }
 
-      rmSync(distFinal, { force: true, recursive: true });
-      renameSync(dist, distFinal);
+      try { rmSync(distFinal, { force: true, recursive: true, maxRetries: 10, retryDelay: 150 }); } catch {}
+      try {
+        renameSync(dist, distFinal);
+      } catch (e) {
+        await new Promise((r) => setTimeout(r, 300));
+        try {
+          renameSync(dist, distFinal);
+        } catch {
+          cpSync(dist, distFinal, { recursive: true, force: true });
+          try { rmSync(dist, { force: true, recursive: true, maxRetries: 10, retryDelay: 150 }); } catch {}
+        }
+      }
+
+      console.log('[Build] Successfully compiled to views/dist.');
+      break;
 
       break;
     }

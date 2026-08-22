@@ -1,6 +1,6 @@
 import Fastify from 'fastify';
 import { createServer } from 'node:http';
-import { Mrrowisp } from "mrrowisp";
+import { Mrrowisp } from 'mrrowisp';
 import fastifyHelmet from '@fastify/helmet';
 import fastifyStatic from '@fastify/static';
 import {
@@ -41,13 +41,7 @@ const wisp = new Mrrowisp({
   trustedHeaders: ['CF-Connecting-IP', 'X-Forwarded-For'],
 
   whitelist: {
-    ports: [
-      80,
-      443,
-      9050,
-      7000,
-      7001
-    ],
+    ports: [80, 443, 9050, 7000, 7001],
   },
 
   connectionsLimitPerIP: 64,
@@ -66,7 +60,7 @@ const wisp = new Mrrowisp({
     maxConnectsPerDestPerMinute: 3000,
     maxInFlightSyns: 768,
     maxConcurrentStreamsPerConnection: 1024,
-    maxConcurrentConnections: 6144, 
+    maxConcurrentConnections: 6144,
     synFloodSignature: {
       enabled: true,
       windowMs: 3000,
@@ -144,21 +138,15 @@ app.register(fastifyStatic, {
 
 // All entries in the dist folder are created with source rewrites.
 // Minified scripts are also served here, if minification is enabled.
-[
-  'assets',
-  'archive',
-  'uv',
-  'scram',
-  'epoxy',
-  'libcurl',
-  'baremux',
-].forEach((prefix) => {
-  app.register(fastifyStatic, {
-    root: fileURLToPath(new URL('../views/dist/' + prefix, import.meta.url)),
-    prefix: getAltPrefix(prefix, serverUrl.pathname),
-    decorateReply: false,
-  });
-});
+['assets', 'archive', 'uv', 'scram', 'epoxy', 'libcurl', 'baremux'].forEach(
+  (prefix) => {
+    app.register(fastifyStatic, {
+      root: fileURLToPath(new URL('../views/dist/' + prefix, import.meta.url)),
+      prefix: getAltPrefix(prefix, serverUrl.pathname),
+      decorateReply: false,
+    });
+  }
+);
 
 app.register(fastifyStatic, {
   root: fileURLToPath(
@@ -327,20 +315,16 @@ app.get(serverUrl.pathname + 'github/:redirect', (req, reply) => {
   else reply.code(404).type(supportedTypes.default).send(preloaded404);
 });
 
-if (serverUrl.pathname === '/')
+app.get(serverUrl.pathname, (req, reply) => {
+  reply
+    .type(supportedTypes.html || supportedTypes.default)
+    .send(tryReadFile('../views/dist/' + pages.index, import.meta.url));
+});
+
+if (serverUrl.pathname === '/') {
   // Set an error page for invalid paths outside the query string system.
-  // If the server URL has a prefix, then avoid doing this for stealth reasons.
   app.setNotFoundHandler((req, reply) => {
     reply.code(404).type(supportedTypes.default).send(preloaded404);
-  });
-else {
-  // Apply the following patch(es) if the server URL has a prefix.
-
-  // Patch to fix serving index.html.
-  app.get(serverUrl.pathname, (req, reply) => {
-    reply
-      .type(supportedTypes.default)
-      .send(tryReadFile('../views/dist/' + pages.index, import.meta.url));
   });
 }
 
@@ -348,18 +332,29 @@ app.addHook('onSend', (request, reply, payload, done) => {
   const cookieHeader = request.headers['cookie'] || '';
   const historyHide = cookieHeader
     .split('; ')
-    .find(c => c.startsWith('HistoryHide='))
+    .find((c) => c.startsWith('HistoryHide='))
     ?.split('=')[1];
 
-  if (historyHide === 'true' && request.headers['sec-fetch-dest'] === 'document') {
+  if (
+    historyHide === 'true' &&
+    request.headers['sec-fetch-dest'] === 'document'
+  ) {
     reply.code(404);
   }
   done(null, payload);
 });
 
-app.listen({ port: serverUrl.port, host: serverUrl.hostname });
+app.listen({
+  port: Number(serverUrl.port) || 8080,
+  host:
+    serverUrl.hostname && serverUrl.hostname !== 'a'
+      ? serverUrl.hostname
+      : '0.0.0.0',
+});
 console.log(`InvisiProxy is listening on port ${serverUrl.port}.`);
-console.log(`When hosting with a reverse proxy please ensure you are using NGINX only.\nCaddy and Apache have security risks due to mrrowisp and loopbacks. Please configure them correctly.\nNGINX is recommended and used for production. Ports are whitelisted and security is maintained with NGINX only.`);
+console.log(
+  `When hosting with a reverse proxy please ensure you are using NGINX only.\nCaddy and Apache have security risks due to mrrowisp and loopbacks. Please configure them correctly.\nNGINX is recommended and used for production. Ports are whitelisted and security is maintained with NGINX only.`
+);
 if (config.disguiseFiles)
   console.log(
     'disguiseFiles is enabled. Visit src/routes.mjs to see the entry point, listed within the pages variable.'

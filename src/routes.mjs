@@ -7,7 +7,8 @@ const config = Object.freeze(
 );
 
 const ecosystemConfig = Object.freeze(
-  ecosystem.apps.find((app) => app.name === 'InvisiProxyLTS') || ecosystem.apps[0]
+  ecosystem.apps.find((app) => app.name === 'InvisiProxyLTS') ||
+    ecosystem.apps[0]
 );
 
 /* Record the server's location as a URL object, including its host and port.
@@ -15,14 +16,17 @@ const ecosystemConfig = Object.freeze(
  * at /ecosystem.config.js.
  */
 const serverUrl = ((base) => {
+  const hostVal = process.env.HOST || config.host || '0.0.0.0';
   try {
-    base = new URL(config.host);
+    base = new URL(hostVal);
   } catch (e) {
     base = new URL('http://a');
-    base.host = config.host;
+    base.host = hostVal;
   }
   base.port =
-    ecosystemConfig[config.production ? 'env_production' : 'env'].PORT;
+    process.env.PORT ||
+    ecosystemConfig[config.production ? 'env_production' : 'env']?.PORT ||
+    8080;
   base.pathname =
     (config.pathname || '/').replace(/\/+$|[^\w\/\.-]+/g, '') + '/';
   return Object.freeze(base);
@@ -99,13 +103,13 @@ let externalPages = {
   codespaces: 'https://github.com/codespaces',
   'tor-project': 'https://tb-manual.torproject.org/installation',
   'titaniumnetwork-documentation': 'https://docs.titaniumnetwork.org',
-  'status': 'https://status.titaniumnetwork.org',
-  'patreon': 'https://www.patreon.com/invisiproxy',
-  'kofi': 'https://ko-fi.com/quiteafancyemerald',
+  status: 'https://status.titaniumnetwork.org',
+  patreon: 'https://www.patreon.com/invisiproxy',
+  kofi: 'https://ko-fi.com/quiteafancyemerald',
   'titaniumnetwork-discord': 'https://discord.gg/CwWpdGkuWY',
-  'truffled': 'https://truffled.lol',
-  'freedomproject': 'https://0xdc.icu',
-  'mrrowisp': 'https://github.com/soap-phia/mrrowisp',
+  truffled: 'https://truffled.lol',
+  freedomproject: 'https://0xdc.icu',
+  mrrowisp: 'https://github.com/soap-phia/mrrowisp',
 };
 
 // Override the route names below when usingSEO is disabled in config.json.
@@ -138,9 +142,9 @@ let altPaths = {
   codespaces: 'codesp',
   'tor-project': 'tr',
   'titaniumnetwork-discord': 'social',
-  'truffled': 'educational',
-  'freedomproject': 'frpu',
-  'mrrowisp': 'mrw',
+  truffled: 'educational',
+  freedomproject: 'frpu',
+  mrrowisp: 'mrw',
   /* Raw File Names */
   files: {
     'sw.js': 'service.js',

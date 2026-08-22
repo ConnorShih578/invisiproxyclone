@@ -136,7 +136,7 @@ const searchEngines = Object.freeze({
     '{{DuckDuckGo}}': 'duckduckgo.com/?q=',
     '{{Brave}}': 'search.brave.com/search?q=',
   }),
-  defaultSearch = '{{defaultSearch}}',
+  defaultSearch = '{{Google}}',
   autocompletes = Object.freeze({
     // Startpage has used both Google's and Bing's autocomplete.
     // For now, just use Bing.
@@ -793,6 +793,746 @@ const preparePage = async () => {
       }
     }
 
+    /* ==========================================================================
+       INVISIBROWSER CONSUMER MULTI-TAB & APPS ENGINE (AGPL-3.0)
+       ========================================================================== */
+
+    class InvisiBrowser {
+      constructor() {
+        this.tabs = [];
+        this.activeTabId = null;
+        this.tabCounter = 1;
+        this.tabListEl = document.getElementById('browser-tabs-list');
+        this.viewportsEl = document.getElementById('browser-viewports-container');
+        this.addressInput = document.getElementById('browser-address-input');
+        this.autocompleteEl = document.getElementById('browser-autocomplete-list');
+        this.backBtn = document.getElementById('browser-btn-back');
+        this.forwardBtn = document.getElementById('browser-btn-forward');
+        this.reloadBtn = document.getElementById('browser-btn-reload');
+        this.homeBtn = document.getElementById('browser-btn-home');
+        this.fullscreenBtn = document.getElementById('browser-btn-fullscreen');
+        this.popoutBtn = document.getElementById('browser-btn-popout');
+        this.goBtn = document.getElementById('browser-btn-go');
+        this.addTabBtn = document.getElementById('browser-btn-add-tab');
+
+        if (this.tabListEl && this.viewportsEl) {
+          this.init();
+        }
+      }
+
+      init() {
+        // Tab bar + New Tab button
+        this.addTabBtn?.addEventListener('click', () => this.createTab());
+
+        // Omnibar events
+        this.addressInput?.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            this.navigateActiveTab(this.addressInput.value);
+            this.hideAutocomplete();
+          }
+        });
+
+        this.goBtn?.addEventListener('click', () => {
+          if (this.addressInput?.value) {
+            this.navigateActiveTab(this.addressInput.value);
+            this.hideAutocomplete();
+          }
+        });
+
+        this.backBtn?.addEventListener('click', () => this.goBack());
+        this.forwardBtn?.addEventListener('click', () => this.goForward());
+        this.reloadBtn?.addEventListener('click', () => this.reload());
+        this.homeBtn?.addEventListener('click', () => this.goHome());
+        this.fullscreenBtn?.addEventListener('click', () => this.toggleFullscreen());
+        this.popoutBtn?.addEventListener('click', () => openBlankCloak());
+
+        // Autocomplete setup on addressInput
+        let acCooldown = false;
+        this.addressInput?.addEventListener('input', (e) => {
+          const val = e.target.value.trim();
+          if (!val || readStorage('UseAC') === false) {
+            this.hideAutocomplete();
+            return;
+          }
+          if (!acCooldown) {
+            acCooldown = true;
+            setTimeout(() => {
+              acCooldown = false;
+            }, 300);
+            let searchType = readStorage('SearchEngine') || '{{Google}}';
+            if (!(searchType in autocompletes)) searchType = '{{Google}}';
+            requestAC('https://' + (autocompletes[searchType] || autocompletes['{{Google}}'] || 'www.google.com/complete/search?client=gws-wiz&callback=_&q='), val, sjUrl, {
+              searchType: searchType,
+              listElement: this.autocompleteEl,
+              time: new Date().toUTCString(),
+            });
+            this.autocompleteEl?.classList.add('active');
+          }
+        });
+
+        this.autocompleteEl?.addEventListener('click', (e) => {
+          const item = e.target.closest('li');
+          if (item && this.addressInput) {
+            this.addressInput.value = item.textContent.trim();
+            this.navigateActiveTab(this.addressInput.value);
+            this.hideAutocomplete();
+          }
+        });
+
+        document.addEventListener('click', (e) => {
+          if (!e.target.closest('.omnibar-search-wrap')) {
+            this.hideAutocomplete();
+          }
+        });
+
+        // Keyboard shortcuts
+        window.addEventListener('keydown', (e) => {
+          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 't') {
+            e.preventDefault();
+            this.createTab();
+          } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'w') {
+            if (this.activeTabId) {
+              e.preventDefault();
+              this.closeTab(this.activeTabId);
+            }
+          }
+        });
+
+        // Setup View Switcher, Portals & Modals
+        this.initViewSwitcher();
+        this.initGamesPortal();
+        this.initAppsPortal();
+        this.initModals();
+
+        // Create initial default tab
+        this.createTab();
+      }
+
+      hideAutocomplete() {
+        if (this.autocompleteEl) {
+          this.autocompleteEl.classList.remove('active');
+          this.autocompleteEl.textContent = '';
+        }
+      }
+
+      createTab(url = null, title = 'New Tab', icon = 'fas fa-compass') {
+        const tabId = 'invisi-tab-' + (this.tabCounter++);
+        const tabData = {
+          id: tabId,
+          url: url || '',
+          title: title,
+          icon: icon,
+          isLoaded: false,
+        };
+        this.tabs.push(tabData);
+
+        // Create Tab Header
+        const tabEl = document.createElement('div');
+        tabEl.className = 'browser-tab';
+        tabEl.id = `header-${tabId}`;
+        tabEl.innerHTML = `
+          <span class="browser-tab-icon"><i class="${icon}"></i></span>
+          <span class="browser-tab-title">${title}</span>
+          <span class="browser-tab-close" title="Close tab (Ctrl+W)">&times;</span>
+        `;
+
+        tabEl.addEventListener('click', (e) => {
+          if (e.target.closest('.browser-tab-close')) {
+            this.closeTab(tabId, e);
+          } else {
+            this.switchTab(tabId);
+          }
+        });
+
+        this.tabListEl.appendChild(tabEl);
+
+        // Create Tab Viewport
+        const viewportEl = document.createElement('div');
+        viewportEl.className = 'browser-tab-viewport';
+        viewportEl.id = `viewport-${tabId}`;
+
+        viewportEl.innerHTML = `
+          <div class="tab-home-screen">
+            <div class="tab-home-content">
+              <div class="tab-home-logo">
+                <img class="tab-home-logo-img" src="{{route}}{{/assets/img/logo.webp}}" alt="InvisiProxy Logo" />
+                <div class="tab-home-title-wrap">
+                  <h1 class="tab-home-title">{{mask}}{{InvisiProxy}} <span style="font-size: 1rem; color: var(--nord8); vertical-align: middle; padding: 2px 8px; border-radius: 6px; background: rgba(136,192,208,0.15); border: 1px solid rgba(136,192,208,0.3);">LTS</span></h1>
+                  <p class="tab-home-tagline">{{mask}}{{Privacy and internet freedom right at your fingertips.}}</p>
+                </div>
+              </div>
+              <div class="tab-home-search-box">
+                <div class="tab-home-search-inner">
+                  <i class="fas fa-search" style="color: var(--nord8); margin-right: 12px;"></i>
+                  <input
+                    type="text"
+                    class="tab-home-search-input"
+                    placeholder="Search Google or enter a website URL..."
+                    autocomplete="off"
+                    spellcheck="false"
+                  />
+                  <button class="tab-home-search-btn">
+                    <span>Search</span>
+                    <i class="fas fa-arrow-right"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="shortcuts-section">
+                <div class="shortcuts-title">Quick Access</div>
+                <div class="shortcuts-grid">
+                  <div class="shortcut-card" data-url="https://google.com">
+                    <div class="shortcut-icon" style="background: rgba(66, 133, 244, 0.2); color: #4285f4;"><i class="fab fa-google"></i></div>
+                    <span class="shortcut-label">Google</span>
+                  </div>
+                  <div class="shortcut-card" data-url="https://youtube.com">
+                    <div class="shortcut-icon" style="background: rgba(255, 0, 0, 0.2); color: #ff4444;"><i class="fab fa-youtube"></i></div>
+                    <span class="shortcut-label">YouTube</span>
+                  </div>
+                  <div class="shortcut-card" data-url="https://discord.com/app">
+                    <div class="shortcut-icon" style="background: rgba(88, 101, 242, 0.2); color: #5865f2;"><i class="fab fa-discord"></i></div>
+                    <span class="shortcut-label">Discord</span>
+                  </div>
+                  <div class="shortcut-card" data-url="https://chat.openai.com">
+                    <div class="shortcut-icon" style="background: rgba(16, 163, 127, 0.2); color: #10a37f;"><i class="fas fa-robot"></i></div>
+                    <span class="shortcut-label">ChatGPT</span>
+                  </div>
+                  <div class="shortcut-card" data-url="https://open.spotify.com">
+                    <div class="shortcut-icon" style="background: rgba(30, 215, 96, 0.2); color: #1ed760;"><i class="fab fa-spotify"></i></div>
+                    <span class="shortcut-label">Spotify</span>
+                  </div>
+                  <div class="shortcut-card" data-url="https://reddit.com">
+                    <div class="shortcut-icon" style="background: rgba(255, 69, 0, 0.2); color: #ff4500;"><i class="fab fa-reddit"></i></div>
+                    <span class="shortcut-label">Reddit</span>
+                  </div>
+                  <div class="shortcut-card" data-url="https://tiktok.com">
+                    <div class="shortcut-icon" style="background: rgba(255, 0, 80, 0.2); color: #ff0050;"><i class="fab fa-tiktok"></i></div>
+                    <span class="shortcut-label">TikTok</span>
+                  </div>
+                  <div class="shortcut-card" data-url="https://twitch.tv">
+                    <div class="shortcut-icon" style="background: rgba(145, 70, 255, 0.2); color: #9146ff;"><i class="fab fa-twitch"></i></div>
+                    <span class="shortcut-label">Twitch</span>
+                  </div>
+                  <div class="shortcut-card" data-url="https://github.com">
+                    <div class="shortcut-icon" style="background: rgba(255, 255, 255, 0.15); color: #eceff4;"><i class="fab fa-github"></i></div>
+                    <span class="shortcut-label">GitHub</span>
+                  </div>
+                  <div class="shortcut-card" data-url="https://wikipedia.org">
+                    <div class="shortcut-icon" style="background: rgba(136, 192, 208, 0.2); color: var(--nord8);"><i class="fab fa-wikipedia-w"></i></div>
+                    <span class="shortcut-label">Wikipedia</span>
+                  </div>
+                  <div class="shortcut-card" data-url="https://fmhy.net">
+                    <div class="shortcut-icon" style="background: rgba(235, 203, 139, 0.2); color: #ebcb8b;"><i class="fas fa-star"></i></div>
+                    <span class="shortcut-label">FMHY</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tab-frame-container" style="display: none;">
+            <div class="tab-frame-loader">
+              <div class="tab-frame-loader-bar"></div>
+            </div>
+            <iframe class="tab-proxy-frame" allow="fullscreen" allowfullscreen></iframe>
+          </div>
+        `;
+
+        // Home Search Events
+        const homeSearchInput = viewportEl.querySelector('.tab-home-search-input');
+        const homeSearchBtn = viewportEl.querySelector('.tab-home-search-btn');
+
+        const triggerHomeSearch = () => {
+          const val = homeSearchInput?.value.trim();
+          if (val) this.navigateTab(tabId, val);
+        };
+
+        homeSearchInput?.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') triggerHomeSearch();
+        });
+        homeSearchBtn?.addEventListener('click', triggerHomeSearch);
+
+        // Shortcut Clicks
+        viewportEl.querySelectorAll('.shortcut-card').forEach((card) => {
+          card.addEventListener('click', () => {
+            const u = card.getAttribute('data-url');
+            if (u) this.navigateTab(tabId, u);
+          });
+        });
+
+        this.viewportsEl.appendChild(viewportEl);
+
+        // Switch to the new tab
+        this.switchTab(tabId);
+
+        if (url) {
+          this.navigateTab(tabId, url);
+        }
+
+        return tabId;
+      }
+
+      switchTab(tabId) {
+        const tab = this.tabs.find((t) => t.id === tabId);
+        if (!tab) return;
+
+        this.activeTabId = tabId;
+
+        document.querySelectorAll('.browser-tab').forEach((el) => el.classList.remove('active'));
+        document.getElementById(`header-${tabId}`)?.classList.add('active');
+
+        document.querySelectorAll('.browser-tab-viewport').forEach((el) => el.classList.remove('active'));
+        document.getElementById(`viewport-${tabId}`)?.classList.add('active');
+
+        if (this.addressInput) {
+          this.addressInput.value = tab.isLoaded ? tab.url : '';
+        }
+
+        document.getElementById(`header-${tabId}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+
+        if (this.backBtn) this.backBtn.disabled = !tab.isLoaded;
+        if (this.forwardBtn) this.forwardBtn.disabled = !tab.isLoaded;
+      }
+
+      closeTab(tabId, e) {
+        if (e) e.stopPropagation();
+
+        const index = this.tabs.findIndex((t) => t.id === tabId);
+        if (index === -1) return;
+
+        document.getElementById(`header-${tabId}`)?.remove();
+        document.getElementById(`viewport-${tabId}`)?.remove();
+
+        this.tabs.splice(index, 1);
+
+        if (this.activeTabId === tabId) {
+          if (this.tabs.length > 0) {
+            const nextIndex = Math.min(index, this.tabs.length - 1);
+            this.switchTab(this.tabs[nextIndex].id);
+          } else {
+            this.createTab();
+          }
+        }
+      }
+
+      navigateActiveTab(queryOrUrl) {
+        if (this.activeTabId) {
+          this.navigateTab(this.activeTabId, queryOrUrl);
+        }
+      }
+
+      navigateTab(tabId, queryOrUrl) {
+        const tab = this.tabs.find((t) => t.id === tabId);
+        const viewportEl = document.getElementById(`viewport-${tabId}`);
+        if (!tab || !viewportEl) return;
+
+        const rawQuery = (queryOrUrl || '').trim();
+        if (!rawQuery) return;
+
+        const targetUrl = search(rawQuery);
+        tab.url = rawQuery;
+        tab.isLoaded = true;
+
+        let displayTitle = rawQuery;
+        try {
+          const u = new URL(targetUrl);
+          displayTitle = u.hostname.replace(/^www\./, '');
+        } catch {}
+
+        tab.title = displayTitle;
+
+        const headerEl = document.getElementById(`header-${tabId}`);
+        if (headerEl) {
+          const titleSpan = headerEl.querySelector('.browser-tab-title');
+          if (titleSpan) titleSpan.textContent = displayTitle;
+        }
+
+        if (this.activeTabId === tabId && this.addressInput) {
+          this.addressInput.value = rawQuery;
+        }
+
+        const homeScreen = viewportEl.querySelector('.tab-home-screen');
+        const frameContainer = viewportEl.querySelector('.tab-frame-container');
+        const frame = viewportEl.querySelector('.tab-proxy-frame');
+        const loader = viewportEl.querySelector('.tab-frame-loader');
+
+        if (homeScreen) homeScreen.style.display = 'none';
+        if (frameContainer) frameContainer.style.display = 'block';
+
+        loader?.classList.add('active');
+
+        const hideLoader = () => {
+          loader?.classList.remove('active');
+        };
+
+        setTimeout(hideLoader, 6000);
+
+        frame.onload = () => {
+          hideLoader();
+          try {
+            if (frame.contentDocument?.title) {
+              const pageTitle = frame.contentDocument.title;
+              if (pageTitle && pageTitle.length > 0) {
+                tab.title = pageTitle;
+                const titleSpan = headerEl?.querySelector('.browser-tab-title');
+                if (titleSpan) titleSpan.textContent = pageTitle;
+              }
+            }
+          } catch {}
+        };
+
+        const proxyEngine = readStorage('ProxyEngine') || 'scramjet';
+
+        const doNav = () => {
+          if (targetUrl.startsWith('about:') || targetUrl.startsWith('blob:') || targetUrl.startsWith(location.origin)) {
+            frame.src = targetUrl;
+          } else if (proxyEngine === 'ultraviolet' || typeof $invisiScramjet === 'undefined') {
+            if (typeof uvConfig !== 'undefined' && uvConfig.prefix && uvConfig.encodeUrl) {
+              frame.src = location.origin + uvConfig.prefix + uvConfig.encodeUrl(targetUrl);
+            } else {
+              frame.src = targetUrl;
+            }
+          } else {
+            if (window.$invisiScramjet?.controller) {
+              if (!frame.$scramjetFrame) {
+                frame.$scramjetFrame = window.$invisiScramjet.controller.createFrame(frame);
+              }
+              if (frame.$scramjetFrame && typeof frame.$scramjetFrame.go === 'function') {
+                frame.$scramjetFrame.go(targetUrl);
+              } else {
+                frame.src = targetUrl;
+              }
+            } else {
+              frame.src = targetUrl;
+            }
+          }
+        };
+
+        if (window.$invisiScramjet?.ready || typeof uvConfig !== 'undefined') {
+          doNav();
+        } else {
+          window.addEventListener('s-ready', doNav, { once: true });
+          setTimeout(doNav, 1500);
+        }
+      }
+
+      goBack() {
+        const viewportEl = document.getElementById(`viewport-${this.activeTabId}`);
+        const frame = viewportEl?.querySelector('.tab-proxy-frame');
+        if (frame?.contentWindow) {
+          try { frame.contentWindow.history.back(); } catch { frame.src = frame.src; }
+        }
+      }
+
+      goForward() {
+        const viewportEl = document.getElementById(`viewport-${this.activeTabId}`);
+        const frame = viewportEl?.querySelector('.tab-proxy-frame');
+        if (frame?.contentWindow) {
+          try { frame.contentWindow.history.forward(); } catch {}
+        }
+      }
+
+      reload() {
+        const viewportEl = document.getElementById(`viewport-${this.activeTabId}`);
+        const frame = viewportEl?.querySelector('.tab-proxy-frame');
+        const loader = viewportEl?.querySelector('.tab-frame-loader');
+        if (frame) {
+          loader?.classList.add('active');
+          frame.src = frame.src;
+        }
+      }
+
+      goHome() {
+        const tab = this.tabs.find((t) => t.id === this.activeTabId);
+        const viewportEl = document.getElementById(`viewport-${this.activeTabId}`);
+        if (!tab || !viewportEl) return;
+
+        tab.isLoaded = false;
+        tab.url = '';
+        tab.title = 'New Tab';
+
+        const headerEl = document.getElementById(`header-${this.activeTabId}`);
+        const titleSpan = headerEl?.querySelector('.browser-tab-title');
+        if (titleSpan) titleSpan.textContent = 'New Tab';
+
+        if (this.addressInput) this.addressInput.value = '';
+
+        const homeScreen = viewportEl.querySelector('.tab-home-screen');
+        const frameContainer = viewportEl.querySelector('.tab-frame-container');
+        const frame = viewportEl.querySelector('.tab-proxy-frame');
+
+        if (homeScreen) homeScreen.style.display = 'flex';
+        if (frameContainer) frameContainer.style.display = 'none';
+        if (frame) frame.src = 'about:blank';
+      }
+
+      toggleFullscreen() {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+
+      initViewSwitcher() {
+        const views = {
+          browser: document.getElementById('browser-view'),
+          games: document.getElementById('games-view'),
+          apps: document.getElementById('apps-view'),
+        };
+
+        const buttons = {
+          browser: document.getElementById('nav-btn-browser'),
+          games: document.getElementById('nav-btn-games'),
+          apps: document.getElementById('nav-btn-apps'),
+        };
+
+        const showView = (viewKey) => {
+          Object.values(views).forEach((v) => v?.classList.remove('active'));
+          Object.values(buttons).forEach((b) => b?.classList.remove('active'));
+
+          views[viewKey]?.classList.add('active');
+          buttons[viewKey]?.classList.add('active');
+        };
+
+        buttons.browser?.addEventListener('click', () => showView('browser'));
+        buttons.games?.addEventListener('click', () => showView('games'));
+        buttons.apps?.addEventListener('click', () => showView('apps'));
+        document.getElementById('brand-home-btn')?.addEventListener('click', () => showView('browser'));
+
+        this.showView = showView;
+      }
+
+      async initGamesPortal() {
+        const grid = document.getElementById('games-grid');
+        const searchInput = document.getElementById('games-search-input');
+        const filterBtns = document.querySelectorAll('#games-filters .games-filter-btn');
+        if (!grid) return;
+
+        let allGames = [];
+
+        try {
+          const [h5, emulib, flash, emu] = await Promise.all([
+            fetch('{{route}}{{/assets/json/h5-nav.json}}').then((r) => r.json()).catch(() => []),
+            fetch('{{route}}{{/assets/json/emulib-nav.json}}').then((r) => r.json()).catch(() => []),
+            fetch('{{route}}{{/assets/json/flash-nav.json}}').then((r) => r.json()).catch(() => []),
+            fetch('{{route}}{{/assets/json/emu-nav.json}}').then((r) => r.json()).catch(() => []),
+          ]);
+
+          // Process HTML5 games
+          h5.forEach((item) => {
+            allGames.push({
+              name: item.name,
+              category: 'h5',
+              categoryLabel: 'HTML5',
+              img: item.img ? `{{route}}{{/assets/img/h5g/}}${item.img}` : '{{route}}{{/assets/img/hero.webp}}',
+              url: item.custom && goProx[item.custom]
+                ? goProx[item.custom]()
+                : `{{route}}{{/archive/g/}}${item.path}`,
+            });
+          });
+
+          // Process Emulib games
+          emulib.forEach((item) => {
+            allGames.push({
+              name: item.name,
+              category: 'emulib',
+              categoryLabel: item.core?.toUpperCase() || 'Retro',
+              img: item.img ? `{{route}}{{/assets/img/emulib/}}${item.img}` : '{{route}}{{/assets/img/hero.webp}}',
+              url: `{{route}}{{/webretro}}?core=${item.core}&rom=${item.rom}`,
+            });
+          });
+
+          // Process Flash games
+          flash.forEach((item) => {
+            const title = item.replace(/\.swf$/i, '').replace(/[-_]/g, ' ');
+            allGames.push({
+              name: title.charAt(0).toUpperCase() + title.slice(1),
+              category: 'flash',
+              categoryLabel: 'Flash',
+              img: '{{route}}{{/assets/img/hero.webp}}',
+              url: `{{route}}{{/flash}}?swf=${item}`,
+            });
+          });
+
+          // Process Standalone Emulators
+          emu.forEach((item) => {
+            allGames.push({
+              name: item.name,
+              category: 'emu',
+              categoryLabel: 'Emulator',
+              img: item.img ? `{{route}}{{/assets/img/emu/}}${item.img}` : '{{route}}{{/assets/img/hero.webp}}',
+              url: item.path,
+            });
+          });
+        } catch (e) {
+          console.warn('Failed loading games data', e);
+        }
+
+        let currentCategory = 'all';
+        let currentSearch = '';
+
+        const renderGames = () => {
+          grid.innerHTML = '';
+          const filtered = allGames.filter((g) => {
+            const matchCat = currentCategory === 'all' || g.category === currentCategory;
+            const matchSearch = !currentSearch || g.name.toLowerCase().includes(currentSearch.toLowerCase());
+            return matchCat && matchSearch;
+          });
+
+          if (filtered.length === 0) {
+            grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--nord3);">No games found matching "${currentSearch}".</div>`;
+            return;
+          }
+
+          filtered.slice(0, 100).forEach((game) => {
+            const card = document.createElement('div');
+            card.className = 'game-portal-card';
+            card.innerHTML = `
+              <img class="game-portal-thumb" src="${game.img}" alt="${game.name}" loading="lazy" onerror="this.src='{{route}}{{/assets/img/hero.webp}}'" />
+              <div class="game-portal-info">
+                <span class="game-portal-badge">${game.categoryLabel}</span>
+                <h3 class="game-portal-name">${game.name}</h3>
+              </div>
+            `;
+
+            card.addEventListener('click', () => {
+              this.showView('browser');
+              this.createTab(game.url, game.name, 'fas fa-gamepad');
+            });
+
+            grid.appendChild(card);
+          });
+        };
+
+        renderGames();
+
+        searchInput?.addEventListener('input', (e) => {
+          currentSearch = e.target.value.trim();
+          renderGames();
+        });
+
+        filterBtns.forEach((btn) => {
+          btn.addEventListener('click', () => {
+            filterBtns.forEach((b) => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentCategory = btn.getAttribute('data-category');
+            renderGames();
+          });
+        });
+      }
+
+      initAppsPortal() {
+        const grid = document.getElementById('apps-grid');
+        if (!grid) return;
+
+        const apps = [
+          { name: 'YouTube', desc: 'Watch videos & livestreams', icon: 'fab fa-youtube', color: '#ff4444', url: 'https://youtube.com' },
+          { name: 'Discord', desc: 'Chat with friends & communities', icon: 'fab fa-discord', color: '#5865f2', url: 'https://discord.com/app' },
+          { name: 'ChatGPT', desc: 'AI conversational assistant', icon: 'fas fa-robot', color: '#10a37f', url: 'https://chat.openai.com' },
+          { name: 'Spotify', desc: 'Stream music & podcasts', icon: 'fab fa-spotify', color: '#1ed760', url: 'https://open.spotify.com' },
+          { name: 'Twitter / X', desc: 'News & social updates', icon: 'fab fa-twitter', color: '#1da1f2', url: 'https://twitter.com' },
+          { name: 'TikTok', desc: 'Short-form mobile videos', icon: 'fab fa-tiktok', color: '#ff0050', url: 'https://tiktok.com' },
+          { name: 'Twitch', desc: 'Live game streaming platform', icon: 'fab fa-twitch', color: '#9146ff', url: 'https://twitch.tv' },
+          { name: 'Reddit', desc: 'Dive into anything', icon: 'fab fa-reddit', color: '#ff4500', url: 'https://reddit.com' },
+          { name: 'Wikiwand', desc: 'Modernized Wikipedia reader', icon: 'fab fa-wikipedia-w', color: '#88c0d0', url: 'https://www.wikiwand.com' },
+          { name: 'FMHY', desc: 'Free Media Heck Yeah curated guides', icon: 'fas fa-star', color: '#ebcb8b', url: 'https://fmhy.net' },
+        ];
+
+        apps.forEach((app) => {
+          const card = document.createElement('div');
+          card.className = 'app-portal-card';
+          card.innerHTML = `
+            <div class="app-portal-icon" style="background: ${app.color}22; color: ${app.color};">
+              <i class="${app.icon}"></i>
+            </div>
+            <div class="app-portal-info">
+              <h3 class="app-portal-name">${app.name}</h3>
+              <p class="app-portal-desc">${app.desc}</p>
+            </div>
+          `;
+
+          card.addEventListener('click', () => {
+            this.showView('browser');
+            this.createTab(app.url, app.name, app.icon);
+          });
+
+          grid.appendChild(card);
+        });
+      }
+
+      initModals() {
+        // Modal openers
+        document.getElementById('btn-open-settings')?.addEventListener('click', () => {
+          document.getElementById('settings-modal')?.classList.add('active');
+        });
+        document.getElementById('btn-open-cloak')?.addEventListener('click', () => {
+          document.getElementById('cloak-modal')?.classList.add('active');
+        });
+        document.getElementById('btn-open-license')?.addEventListener('click', () => {
+          document.getElementById('license-modal')?.classList.add('active');
+        });
+
+        // Close handlers
+        document.querySelectorAll('[data-close-modal]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const modalId = btn.getAttribute('data-close-modal');
+            if (modalId) document.getElementById(modalId)?.classList.remove('active');
+          });
+        });
+
+        document.querySelectorAll('.consumer-modal-backdrop').forEach((backdrop) => {
+          backdrop.addEventListener('click', (e) => {
+            if (e.target === backdrop) backdrop.classList.remove('active');
+          });
+        });
+
+        // Blank cloak trigger inside cloak modal
+        document.getElementById('btn-trigger-blank-cloak')?.addEventListener('click', () => {
+          openBlankCloak();
+        });
+
+        // Cloak presets
+        const cloakPresetSelect = document.getElementById('setting-cloak-preset');
+        const customTitle = document.getElementById('custom-cloak-title');
+        const customIcon = document.getElementById('custom-cloak-icon');
+        const applyCloakBtn = document.getElementById('btn-apply-cloak');
+
+        const presets = {
+          'google-classroom': { title: 'Home', icon: 'https://ssl.gstatic.com/classroom/favicon.png' },
+          'google-drive': { title: 'My Drive - Google Drive', icon: 'https://ssl.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png' },
+          'google-docs': { title: 'Google Docs', icon: 'https://ssl.gstatic.com/docs/documents/images/kix-favicon7.ico' },
+          'canvas': { title: 'Dashboard', icon: 'https://du11hjcvx0uqb.cloudfront.net/dist/images/favicon-e10d657a73.ico' },
+          'desmos': { title: 'Desmos | Graphing Calculator', icon: 'https://www.desmos.com/favicon.ico' },
+        };
+
+        cloakPresetSelect?.addEventListener('change', (e) => {
+          const preset = presets[e.target.value];
+          if (preset && customTitle && customIcon) {
+            customTitle.value = preset.title;
+            customIcon.value = preset.icon;
+          }
+        });
+
+        applyCloakBtn?.addEventListener('click', () => {
+          if (customTitle && customTitle.value) {
+            document.title = customTitle.value;
+          }
+          if (customIcon && customIcon.value) {
+            let link = document.querySelector("link[rel*='icon']");
+            if (!link) {
+              link = document.createElement('link');
+              link.rel = 'shortcut icon';
+              document.head.appendChild(link);
+            }
+            link.href = customIcon.value;
+          }
+          document.getElementById('cloak-modal')?.classList.remove('active');
+        });
+      }
+    }
+
+    // Initialize InvisiBrowser
+    window.invisiBrowser = new InvisiBrowser();
+
     const isTopLevel = window.self === window.top;
     if (isTopLevel) {
       const launchType = readStorage('LaunchType');
@@ -809,10 +1549,11 @@ const preparePage = async () => {
         setTimeout(() => {
           window.close();
         }, 100);
+      }
     }
-  }
-};
-if ('loading' === document.readyState)
-  addEventListener('DOMContentLoaded', preparePage);
-else preparePage();
+  };
+  if ('loading' === document.readyState)
+    addEventListener('DOMContentLoaded', preparePage);
+  else preparePage();
 })();
+
