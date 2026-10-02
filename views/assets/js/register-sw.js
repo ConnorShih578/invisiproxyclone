@@ -102,11 +102,17 @@
     if (typeof $scramjetUtils === 'undefined') return [];
     const plugins = [new $scramjetUtils.HttpCachePlugin()];
 
-    const omniInput = document.getElementById('search-input');
     plugins.push(
       new $scramjetUtils.UrlWatcherPlugin((url) => {
-        if (omniInput && document.activeElement !== omniInput)
+        const omniInput =
+          document.getElementById('browser-address-input') ||
+          document.getElementById('search-input');
+        if (omniInput && document.activeElement !== omniInput) {
           omniInput.value = url;
+        }
+        window.dispatchEvent(
+          new CustomEvent('proxy-url-change', { detail: { url } })
+        );
       })
     );
 
