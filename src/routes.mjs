@@ -71,6 +71,7 @@ let pages = {
   /* Proxies */
   ultraviolet: 'pages/proxnav/ultraviolet.html',
   scramjet: 'pages/proxnav/scramjet.html',
+  physics: 'pages/proxnav/scramjet.html',
   uverror: 'pages/proxnav/ultraviolet-error.html',
   sjerror: 'pages/proxnav/scramjet-error.html',
   /* Proxy Presets */

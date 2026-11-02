@@ -139,14 +139,20 @@ const testServerResponse = async () => {
 };
 
 const testCommonJSOnPage = async () => {
-  const browser = await chromium.launch({
+  let browser;
+  const launchOpts = {
     args: [
       '--enable-features=NetworkService',
       '--enable-features=ServiceWorker',
       '--enable-features=InsecureOrigins',
     ],
     headless: true,
-  });
+  };
+  try {
+    browser = await chromium.launch(launchOpts);
+  } catch {
+    browser = await chromium.launch({ ...launchOpts, channel: 'chrome' });
+  }
   const context = await browser.newContext({
     ignoreHTTPSErrors: true,
   });

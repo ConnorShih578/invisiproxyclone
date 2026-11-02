@@ -1,186 +1,140 @@
+<!doctype html>
 <html>
   <head>
-    <title>{{mask}}{{Scramjet}}</title>
+    <title>This site can’t be reached</title>
     <meta itemprop="http-status" content="404" />
     <!--HEAD-CONTENT-->
-    <link
-      rel="stylesheet"
-      href="https://www.nerdfonts.com/assets/css/webfont.css"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
     <style>
       *,
-      body {
-        color: #eceff4;
-        background-color: #0d1117;
-        font-family: 'Figtree', sans-serif;
-        font-optical-sizing: auto;
-        background-image:
-          radial-gradient(circle, rgba(131, 131, 131, 0.02) 1px, transparent 1px),
-          radial-gradient(circle, rgba(148, 148, 148, 0.02) 1px, transparent 1px);
-        background-position: 0 0, 5px 5px;
-        background-size: 10px 10px;
+      *::before,
+      *::after {
+        box-sizing: border-box;
       }
 
-      #password-field {
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background-color: #202124;
+        color: #9aa0a6;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          Helvetica, Arial, sans-serif;
+        font-size: 14px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      #cover {
         display: none;
       }
 
-      h1 {
-        color: #ff5861;
-        font-size: clamp(22px, 6vw, 64px);
-        font-weight: 900;
-        margin-top: clamp(3%, 6%, 6%);
+      #inner {
+        max-width: 600px;
+        margin: 10vh auto 0;
+        padding: 0 24px;
       }
 
-      code,
-      i {
-        color: #e5e9f0;
-        font-size: clamp(14px, 2.5vw, 24px);
+      .chrome-err-icon {
+        width: 48px;
+        height: 48px;
+        margin-bottom: 24px;
+        color: #9aa0a6;
+      }
+
+      h1#errorTitle {
+        color: #e8eaed;
+        font-size: 24px;
+        font-weight: 500;
+        margin: 0 0 12px;
+      }
+
+      .chrome-err-sub {
+        margin: 0 0 16px;
+        color: #9aa0a6;
+        word-break: break-all;
+      }
+
+      .chrome-err-sub b {
+        color: #e8eaed;
         font-weight: 500;
       }
 
-      i {
-        color: #e5e9f0;
-        font-size: clamp(13px, 2vw, 20px);
-        font-weight: 900;
-        text-decoration: none;
-        font-style: normal;
+      #troubleshooting ul {
+        margin: 0 0 16px;
+        padding-left: 20px;
       }
 
-      .footer-spacing {
-        margin-top: 0.5%;
-        font-size: clamp(0.8em, 1.5vw, 1em);
+      #troubleshooting li {
+        margin-bottom: 4px;
       }
 
-      button {
-        display: inline-block;
-        text-decoration: none;
-        padding: clamp(8px, 1.5vw, 15px) clamp(18px, 4vw, 50px);
-        border-radius: 8px;
-        margin: 10px;
-        margin-top: 20px;
-        font-size: clamp(0.85em, 1.5vw, 1em);
-        transition: 0.3s ease-in-out;
-        -webkit-transition: 0.3s ease-in-out;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        -webkit-backdrop-filter: blur(10px);
-        backdrop-filter: blur(10px);
+      .chrome-err-code {
+        font-size: 12px;
+        color: #9aa0a6;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 28px;
       }
 
-      button:hover {
-        background-color: #434c5e;
+      button#reload {
+        background-color: #8ab4f8;
+        color: #202124;
+        border: none;
+        border-radius: 4px;
+        padding: 8px 16px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
       }
 
-      textarea {
-        border-radius: 18px;
-        outline: none;
-        resize: none;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        padding: clamp(12px, 2vw, 25px);
-        box-sizing: border-box;
-        width: min(450px, 92vw);
-        font-size: clamp(0.85em, 1.5vw, 1em);
-      }
-
-      .nf-fa-heart {
-        color: #ff5861;
-      }
-
-      html {
-        height: 100%;
-      }
-
-      body {
-        display: flex;
-        align-items: center;
-        flex-direction: column;
-        gap: 1em;
-        min-height: 100%;
-        overflow-y: auto;
-      }
-
-      #inner {
-        display: flex;
-        align-items: center;
-        flex-direction: column;
-        gap: 1em;
-        width: min(900px, 94vw);
-        padding: 0 clamp(8px, 2vw, 24px);
-        box-sizing: border-box;
-        z-index: 100;
-      }
-      
-      #cover {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        background-color: color-mix(in srgb, var(--deep) 70%, transparent);
-        z-index: 99;
-      }
-
-      #info {
-        display: flex;
-        flex-direction: row;
-        align-items: flex-start;
-        gap: 1em;
-        flex-wrap: wrap;
-        width: 100%;
+      button#reload:hover {
+        background-color: #aecbfa;
       }
 
       #errorTrace-wrapper {
         position: relative;
-        width: fit-content;
-        max-width: 100%;
+        margin-top: 12px;
+      }
+
+      textarea#errorTrace {
+        width: 100%;
+        min-height: 120px;
+        background: #292a2d;
+        color: #9aa0a6;
+        border: 1px solid #3c4043;
+        border-radius: 6px;
+        padding: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          monospace;
+        font-size: 12px;
+        resize: vertical;
+        outline: none;
       }
 
       #copy-button {
         position: absolute;
-        top: 0.5em;
-        right: 0.5em;
-        padding: 0.23em;
+        top: 8px;
+        right: 8px;
+        background: #35363a;
+        color: #e8eaed;
+        border: 1px solid #5f6368;
+        border-radius: 4px;
+        padding: 4px 8px;
+        font-size: 11px;
         cursor: pointer;
-        opacity: 0;
-        transition: opacity 0.4s;
-        font-size: 0.9em;
       }
 
-      #errorTrace-wrapper:hover #copy-button {
-        opacity: 1;
+      details.chrome-err-details {
+        margin-top: 20px;
       }
 
-      #troubleshooting,
-      .text-wrap {
-        text-align: left;
-        width: 100%;
-        max-width: 100%;
-      }
-
-      #troubleshooting ul {
-        margin-left: 1.2em;
-        padding-left: 0.8em;
-        list-style-position: outside;
-      }
-
-      #troubleshooting li {
-        text-align: left;
-        margin-bottom: 0.5em;
-      }
-
-      @media (max-width: 600px) {
-        #info {
-          flex-direction: column;
-          align-items: stretch;
-        }
+      details.chrome-err-details summary {
+        color: #9aa0a6;
+        cursor: pointer;
+        font-size: 13px;
+        user-select: none;
       }
     </style>
   </head>
@@ -188,75 +142,77 @@
     <!-- IMPORTANT-IVINSERT-DONOTDELETE -->
     <!--ANTI-EXFIL-->
     <div id="cover"></div>
-    <div id="inner" class="container-fluid text-center">
-      <h1 id="errorTitle">{{mask}}{{Scramjet Network Error}}</h1>
-      <code>Failed to load: <b id="fetchedURL"></b></code>
-      <h2>{{mask}}{{Reloading the page will fix your problem.}}</h2>
-      <br />
-      <!-- <p id="errorMessage">Internal Server Error</p> -->
-      <button id="reload">{{mask}}{{Refresh Page}}</button>
-      <br />
+    <div id="inner">
+      <svg
+        class="chrome-err-icon"
+        viewBox="0 0 48 48"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path d="M10 6h20l8 8v28a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" />
+        <polyline points="28 6 28 14 36 14" />
+        <line x1="18" y1="24" x2="22" y2="28" />
+        <line x1="22" y1="24" x2="18" y2="28" />
+        <line x1="26" y1="24" x2="30" y2="28" />
+        <line x1="30" y1="24" x2="26" y2="28" />
+        <path d="M18 36c2-2 10-2 12 0" />
+      </svg>
+
+      <h1 id="errorTitle">This site can’t be reached</h1>
+      <p class="chrome-err-sub">
+        The webpage at <b id="fetchedURL"></b> might be temporarily down or it
+        may have moved permanently to a new web address.
+      </p>
+
       <div id="info">
-        <div id="errorTrace-wrapper" class="container">
-          <textarea id="errorTrace" cols="40" rows="10" readonly></textarea>
-          <button id="copy-button" class="primary">Copy</button>
-        </div>
-        <div id="troubleshooting" class="container text-wrap">
-          <p>Try:</p>
+        <div id="troubleshooting">
           <ul>
-            <li>
-              {{mask}}{{Reloading the page; this is a known issue with our
-              proxies}}
-            </li>
-            <li>
-              {{mask}}{{In the case of an IDB Database error please clear your
-              site data by clicking on the lock icon in the address bar and
-              selecting "Site settings" or "Site data" and then clicking "Clear
-              site data"}}
-            </li>
-            <li>
-              {{mask}}{{Clearing your browser or site cache data via
-              Ctrl+Shift+R and browser settings}}
-            </li>
-            <li>{{mask}}{{Verifying you entered the correct address}}</li>
-            <li>
-              {{mask}}{{In the case of website maintenance or updates, please
-              wait for the issue to be resolved.}}
-            </li>
-            <li>{{mask}}{{Verifying you entered the correct address}}</li>
-            <li>{{mask}}{{Verify the server isn't censored}}</li>
-            <li>
-              {{mask}}{{View the FAQ page for specific site compatibility
-              issues.}}
-            </li>
-            <li>
-              {{mask}}{{Troubleshooting the error on the }}<a
-                href="{{route}}{{/github/scramjet}}"
-                target="_blank"
-                >{{mask}}{{Scramjet GitHub.}}</a
-              >
-            </li>
-            <li>
-              {{mask}}{{Try a different proxy engine via the settings panel.}}
-            </li>
-            <li>
-              {{mask}}{{If the issue persists be sure to mention this in the
-              TitaniumNetwork Discord.}}
-            </li>
+            <li>Reload the page to re-establish the connection.</li>
+            <li>Check the address for typing errors.</li>
+            <li>Try switching proxy engines in Settings if the site is incompatible.</li>
           </ul>
         </div>
       </div>
-      <code
-        ><i
-          >{{mask}}{{Refresh the network service | Scramjet v1.1.0 - build
-          57ba89e.}}</i
-        ></code
-      >
-      <p class="footer-spacing">
-        <i>{{mask}}{{InvisiProxy LTS © 2020-2026 | Made With Love}} </i
-        ><i class="nf nf-fa-heart"></i>
-      </p>
+
+      <div class="chrome-err-code">ERR_SCRAMJET_PROXY_FAILED</div>
+
+      <button id="reload">Reload</button>
+
+      <details class="chrome-err-details">
+        <summary>Details</summary>
+        <div id="errorTrace-wrapper">
+          <textarea id="errorTrace" cols="40" rows="6" readonly></textarea>
+          <button id="copy-button" class="primary">Copy</button>
+        </div>
+      </details>
     </div>
     <script src="{{src}}"></script>
+    <script>
+      (function () {
+        try {
+          var traceEl = document.getElementById('errorTrace');
+          var text = traceEl ? traceEl.value || traceEl.textContent || '' : '';
+          if (
+            text.indexOf('there are no bare clients') !== -1 ||
+            text.indexOf('No BareTransport') !== -1
+          ) {
+            var key = 'sj_auto_retry_' + location.pathname;
+            var count = parseInt(sessionStorage.getItem(key) || '0', 10);
+            if (count < 2) {
+              sessionStorage.setItem(key, String(count + 1));
+              try {
+                if (window.parent && typeof window.parent.$ensureBareMux === 'function') {
+                  window.parent.$ensureBareMux(true);
+                }
+              } catch (e) {}
+              setTimeout(function () {
+                location.reload();
+              }, 350);
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
   </body>
 </html>

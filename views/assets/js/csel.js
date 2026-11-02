@@ -553,10 +553,10 @@ useStorageArgs('UseSocks5', (s) => {
 useStorageArgs('HistoryHide', (s) => {
   classUpdateHandler(
     document.getElementsByClassName('history-toggle'),
-    s || 'hidehistory'
+    s || 'none'
   )();
 
-  if (s === 'hidehistory' || !s) {
+  if (s === 'hidehistory') {
     setCookie('HistoryHide', 'true');
   } else {
     removeCookie('HistoryHide');

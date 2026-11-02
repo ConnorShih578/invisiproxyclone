@@ -222,6 +222,24 @@ commands: for (let i = 2; i < process.argv.length; i++)
         compile(relSrc, '', prefix);
       }
 
+      // Patch bare-mux worker.js to wait for transport initialization and request transport refresh if null,
+      // preventing "there are no bare clients" race conditions.
+      const baremuxWorkerDist = fileURLToPath(
+        new URL('./views/dist-new/baremux/worker.js', import.meta.url)
+      );
+      if (existsSync(baremuxWorkerDist)) {
+        let workerSrc = tryReadFile(
+          './views/dist-new/baremux/worker.js',
+          import.meta.url,
+          false
+        );
+        workerSrc = workerSrc.replaceAll(
+          'if(!s)throw c();',
+          'if(!s){try{new BroadcastChannel("bare-mux").postMessage({type:"refreshPort"})}catch(e){}for(let w=0;w<40&&!s;w++)await new Promise(r=>setTimeout(r,50));if(!s)throw c();}'
+        );
+        writeFileSync(baremuxWorkerDist, workerSrc);
+      }
+
       // Minify the scripts and stylesheets upon compiling, if enabled in config.
       if (config.minifyScripts)
         await build({

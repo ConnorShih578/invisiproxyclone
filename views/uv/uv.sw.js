@@ -34,6 +34,14 @@ const cspHeaders = [
 ];
 const emptyMethods = ['GET', 'HEAD'];
 
+self.addEventListener('install', () => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 class UVServiceWorker extends Ultraviolet.EventEmitter {
   constructor(config = self['{{__uv$config}}']) {
     super();
@@ -54,6 +62,47 @@ class UVServiceWorker extends Ultraviolet.EventEmitter {
       return true;
     else return false;
   }
+
+  async fetchWithRetry(fetchedURL, fetchOpts, maxAttempts = 4) {
+    let lastErr;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        return await this.bareClient.fetch(fetchedURL, fetchOpts);
+      } catch (err) {
+        lastErr = err;
+        const errMsg = String(err?.message || err || '');
+        // Notify window clients to ensure BareMux transport is initialized
+        try {
+          const clients = await self.clients.matchAll({
+            type: 'window',
+            includeUncontrolled: true,
+          });
+          for (const client of clients) {
+            client.postMessage({ msg: 'ensureBareMux' });
+          }
+        } catch {}
+        try {
+          new BroadcastChannel('bare-mux').postMessage({ type: 'refreshPort' });
+        } catch {}
+
+        if (
+          errMsg.includes('no bare clients') ||
+          errMsg.includes('BareTransport') ||
+          attempt >= 1
+        ) {
+          try {
+            this.bareClient = new Ultraviolet.BareClient();
+          } catch {}
+        }
+
+        if (attempt < maxAttempts - 1) {
+          await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
+        }
+      }
+    }
+    throw lastErr;
+  }
+
   /**
    *
    * @param {Event & {request: Request}} param0
@@ -96,17 +145,19 @@ class UVServiceWorker extends Ultraviolet.EventEmitter {
       }
 
       if (request.referrer && request.referrer.startsWith(location.origin)) {
-        const referer = new URL(ultraviolet.sourceUrl(request.referrer));
+        try {
+          const referer = new URL(ultraviolet.sourceUrl(request.referrer));
 
-        if (
-          requestCtx.headers.origin ||
-          (ultraviolet.meta.url.origin !== referer.origin &&
-            request.mode === 'cors')
-        ) {
-          requestCtx.headers.origin = referer.origin;
-        }
+          if (
+            requestCtx.headers.origin ||
+            (ultraviolet.meta.url.origin !== referer.origin &&
+              request.mode === 'cors')
+          ) {
+            requestCtx.headers.origin = referer.origin;
+          }
 
-        requestCtx.headers.referer = referer.href;
+          requestCtx.headers.referer = referer.href;
+        } catch {}
       }
 
       const cookies = (await ultraviolet.cookie.getCookies(db)) || [];
@@ -129,7 +180,7 @@ class UVServiceWorker extends Ultraviolet.EventEmitter {
         ? 'blob:' + location.origin + requestCtx.url.pathname
         : requestCtx.url;
 
-      const response = await this.bareClient.fetch(fetchedURL, {
+      const response = await this.fetchWithRetry(fetchedURL, {
         headers: Object.entries(requestCtx.headers),
         method: requestCtx.method,
         body: requestCtx.body,
@@ -201,22 +252,41 @@ class UVServiceWorker extends Ultraviolet.EventEmitter {
       }
 
       if (responseCtx.body) {
+        const contentType = (
+          responseCtx.getHeader('content-type') || ''
+        ).toLowerCase();
+        const pathname = ultraviolet.meta.url?.pathname?.toLowerCase() || '';
+
         switch (request.destination) {
-          case 'script':
-            responseCtx.body = ultraviolet.js.rewrite(await response.text());
+          case 'script': {
+            const rawJs = await response.text();
+            try {
+              responseCtx.body = ultraviolet.js.rewrite(rawJs);
+            } catch {
+              responseCtx.body = rawJs;
+            }
+            if (!responseCtx.headers['content-type']) {
+              responseCtx.headers['content-type'] =
+                'application/javascript; charset=utf-8';
+            }
             break;
-          case 'worker':
-            {
-              // craft a JS-safe list of arguments
-              const scripts = [
-                ultraviolet.bundleScript,
-                ultraviolet.clientScript,
-                ultraviolet.configScript,
-                ultraviolet.handlerScript,
-              ]
-                .map((script) => JSON.stringify(script))
-                .join(',');
-              responseCtx.body = `if (!self.__uv) {
+          }
+          case 'worker': {
+            // craft a JS-safe list of arguments
+            const scripts = [
+              ultraviolet.bundleScript,
+              ultraviolet.clientScript,
+              ultraviolet.configScript,
+              ultraviolet.handlerScript,
+            ]
+              .map((script) => JSON.stringify(script))
+              .join(',');
+            const rawWorkerJs = await response.text();
+            let rewrittenWorkerJs = rawWorkerJs;
+            try {
+              rewrittenWorkerJs = ultraviolet.js.rewrite(rawWorkerJs);
+            } catch {}
+            responseCtx.body = `if (!self.__uv) {
                                 ${ultraviolet.createJsInject(
                                   ultraviolet.cookie.serialize(
                                     cookies,
@@ -227,17 +297,26 @@ class UVServiceWorker extends Ultraviolet.EventEmitter {
                                 )}
                             importScripts(${scripts});
                             }\n`;
-              responseCtx.body += ultraviolet.js.rewrite(await response.text());
+            responseCtx.body += rewrittenWorkerJs;
+            break;
+          }
+          case 'style': {
+            const rawCss = await response.text();
+            try {
+              responseCtx.body = ultraviolet.rewriteCSS(rawCss);
+            } catch {
+              responseCtx.body = rawCss;
+            }
+            if (!responseCtx.headers['content-type']) {
+              responseCtx.headers['content-type'] = 'text/css; charset=utf-8';
             }
             break;
-          case 'style':
-            responseCtx.body = ultraviolet.rewriteCSS(await response.text());
-            break;
+          }
           case 'iframe':
           case 'document':
             if (
-              responseCtx.getHeader('content-type') &&
-              responseCtx.getHeader('content-type').startsWith('text/html')
+              contentType.startsWith('text/html') ||
+              contentType.includes('application/xhtml+xml')
             ) {
               let modifiedResponse = await response.text();
               if (Array.isArray(this.config.inject)) {
@@ -268,20 +347,40 @@ class UVServiceWorker extends Ultraviolet.EventEmitter {
                   }
                 }
               }
-              responseCtx.body = ultraviolet.rewriteHtml(modifiedResponse, {
-                document: true,
-                injectHead: ultraviolet.createHtmlInject(
-                  ultraviolet.handlerScript,
-                  ultraviolet.bundleScript,
-                  ultraviolet.clientScript,
-                  ultraviolet.configScript,
-                  ultraviolet.cookie.serialize(cookies, ultraviolet.meta, true),
-                  request.referrer
-                ),
-              });
+              try {
+                responseCtx.body = ultraviolet.rewriteHtml(modifiedResponse, {
+                  document: true,
+                  injectHead: ultraviolet.createHtmlInject(
+                    ultraviolet.handlerScript,
+                    ultraviolet.bundleScript,
+                    ultraviolet.clientScript,
+                    ultraviolet.configScript,
+                    ultraviolet.cookie.serialize(
+                      cookies,
+                      ultraviolet.meta,
+                      true
+                    ),
+                    request.referrer
+                  ),
+                });
+              } catch {
+                responseCtx.body = modifiedResponse;
+              }
             }
             break;
           default:
+            // Handle preloaded or dynamically fetched stylesheets/scripts when destination is empty
+            if (
+              !request.destination &&
+              (contentType.startsWith('text/css') || pathname.endsWith('.css'))
+            ) {
+              const rawCss = await response.text();
+              try {
+                responseCtx.body = ultraviolet.rewriteCSS(rawCss);
+              } catch {
+                responseCtx.body = rawCss;
+              }
+            }
             break;
         }
       }
@@ -293,6 +392,8 @@ class UVServiceWorker extends Ultraviolet.EventEmitter {
         responseCtx.headers['Cross-Origin-Embedder-Policy'] = 'require-corp';
       }
 
+      responseCtx.headers['access-control-allow-origin'] = '*';
+
       this.emit('response', resEvent);
       if (resEvent.intercepted) return resEvent.returnValue;
 
@@ -302,8 +403,21 @@ class UVServiceWorker extends Ultraviolet.EventEmitter {
         statusText: responseCtx.statusText,
       });
     } catch (err) {
-      if (!['document', 'iframe'].includes(request.destination))
+      if (!['document', 'iframe'].includes(request.destination)) {
+        if (request.destination === 'style') {
+          return new Response('/* proxy stylesheet load error */', {
+            status: 200,
+            headers: { 'content-type': 'text/css; charset=utf-8' },
+          });
+        }
+        if (request.destination === 'script') {
+          return new Response('/* proxy script load error */', {
+            status: 200,
+            headers: { 'content-type': 'application/javascript; charset=utf-8' },
+          });
+        }
         return new Response(undefined, { status: 500 });
+      }
 
       console.error(err);
 

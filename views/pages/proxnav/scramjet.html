@@ -9,6 +9,7 @@
     />
     }}
     <!--HEAD-CONTENT-->
+    <script src="{{route}}{{/baremux/index.js}}" defer data-module></script>
     <script src="{{route}}{{/scram/scramjet.js}}" defer data-module></script>
     <script src="{{route}}{{/scram/controller.api.js}}" defer data-module></script>
     <script src="{{route}}{{/scram/scramjet-utils.js}}" defer data-module></script>
@@ -62,12 +63,12 @@
           </div>
           <div class="proxy-form text-center">
             <div id="pr-sj" class="pr-form">
-              <select class="pr-button glowbutton search-engine-list">|
-                <option>{{Startpage}}</option>
+              <select class="pr-button glowbutton search-engine-list">
+                <option selected>{{DuckDuckGo}}</option>
                 <option>{{Brave}}</option>
-                <option>{{Google}}</option>
+                <option>{{Startpage}}</option>
                 <option>{{Bing}}</option>
-                <option>{{DuckDuckGo}}</option>
+                <option>{{Google}}</option>
               </select>
 
               <div class="search-box">

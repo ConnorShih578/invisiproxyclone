@@ -37,9 +37,9 @@ self.addEventListener('fetch', (event) => {
             )
           ).hostname;
 
-          // If the domain is in the blacklist, return a 406 response code.
+          // If the domain is in the blacklist, return an empty 204 response code.
           if (isBlacklistedDomain(hostname))
-            return new Response(new Blob(), { status: 406 });
+            return new Response('', { status: 204 });
         } catch {}
         return await uv.fetch(event);
       }

@@ -124,19 +124,31 @@ const getDomain = () =>
 /* READ SETTINGS */
 
 const storageId = '{{hu-lts}}-storage',
-  storageObject = () => JSON.parse(localStorage.getItem(storageId)) || {},
-  readStorage = (name) => storageObject()[name];
+  storageObject = () => {
+    try {
+      return JSON.parse(localStorage.getItem(storageId)) || {};
+    } catch {
+      return {};
+    }
+  },
+  readStorage = (name) => storageObject()[name],
+  writeStorage = (name, value) => {
+    const obj = storageObject();
+    if (value === undefined || value === null) delete obj[name];
+    else obj[name] = value;
+    localStorage.setItem(storageId, JSON.stringify(obj));
+  };
 
 /* OMNIBOX */
 
 const searchEngines = Object.freeze({
-    '{{Startpage}}': 'startpage.com/sp/search?query=',
-    '{{Google}}': 'google.com/search?q=',
-    '{{Bing}}': 'bing.com/search?q=',
     '{{DuckDuckGo}}': 'duckduckgo.com/?q=',
     '{{Brave}}': 'search.brave.com/search?q=',
+    '{{Startpage}}': 'startpage.com/sp/search?query=',
+    '{{Bing}}': 'bing.com/search?q=',
+    '{{Google}}': 'google.com/search?q=',
   }),
-  defaultSearch = '{{Google}}',
+  defaultSearch = '{{DuckDuckGo}}',
   autocompletes = Object.freeze({
     // Startpage has used both Google's and Bing's autocomplete.
     // For now, just use Bing.
@@ -284,8 +296,19 @@ const updateAC = (listElement, searchResults, time) => {
   }
 };
 
-const getSearchTemplate = (
-    searchEngine = searchEngines[readStorage('SearchEngine')] ||
+const normalizeSearchKey = (key) => {
+    if (!key || typeof key !== 'string') return defaultSearch;
+    const stripped = key.replace(/^\{\{|\}\}$/g, '');
+    return searchEngines[key]
+      ? key
+      : searchEngines[stripped]
+        ? stripped
+        : searchEngines[`{{${stripped}}}`]
+          ? `{{${stripped}}}`
+          : defaultSearch;
+  },
+  getSearchTemplate = (
+    searchEngine = searchEngines[normalizeSearchKey(readStorage('SearchEngine'))] ||
       searchEngines[defaultSearch]
   ) => `https://${searchEngine}%s`,
   // Resolve route placeholders if present
@@ -897,13 +920,13 @@ const preparePage = async () => {
             setTimeout(() => {
               acCooldown = false;
             }, 300);
-            let searchType = readStorage('SearchEngine') || '{{Google}}';
-            if (!(searchType in autocompletes)) searchType = '{{Google}}';
+            let searchType = normalizeSearchKey(readStorage('SearchEngine'));
+            if (!(searchType in autocompletes)) searchType = defaultSearch;
             requestAC(
               'https://' +
                 (autocompletes[searchType] ||
-                  autocompletes['{{Google}}'] ||
-                  'www.google.com/complete/search?client=gws-wiz&callback=_&q='),
+                  autocompletes[defaultSearch] ||
+                  'duckduckgo.com/ac/?q='),
               val,
               sjUrl,
               {
@@ -914,6 +937,10 @@ const preparePage = async () => {
             );
             this.autocompleteEl?.classList.add('active');
           }
+        });
+
+        this.addressInput?.addEventListener('focus', () => {
+          this.addressInput.select();
         });
 
         this.autocompleteEl?.addEventListener('click', (e) => {
@@ -929,7 +956,63 @@ const preparePage = async () => {
           if (!e.target.closest('.omnibar-search-wrap')) {
             this.hideAutocomplete();
           }
+          if (!e.target.closest('.chromium-menu-wrap')) {
+            document
+              .getElementById('chromium-dropdown-menu')
+              ?.classList.remove('active');
+          }
         });
+
+        // Chromium 3-dot menu handlers
+        const menuBtn = document.getElementById('btn-chromium-menu');
+        const dropdownMenu = document.getElementById('chromium-dropdown-menu');
+        menuBtn?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          dropdownMenu?.classList.toggle('active');
+        });
+
+        const closeMenu = () => dropdownMenu?.classList.remove('active');
+
+        document
+          .getElementById('menu-new-tab')
+          ?.addEventListener('click', () => {
+            closeMenu();
+            this.showView('browser');
+            this.createTab();
+          });
+        document
+          .getElementById('menu-new-blank')
+          ?.addEventListener('click', () => {
+            closeMenu();
+            openBlankCloak();
+          });
+        document
+          .getElementById('menu-open-apps')
+          ?.addEventListener('click', () => {
+            closeMenu();
+            this.showView('apps');
+          });
+        document
+          .getElementById('menu-open-games')
+          ?.addEventListener('click', () => {
+            closeMenu();
+            this.showView('games');
+          });
+        document
+          .getElementById('menu-switch-engine')
+          ?.addEventListener('click', () => {
+            closeMenu();
+            const currentEngine = readStorage('ProxyEngine') || 'ultraviolet';
+            const nextEngine =
+              currentEngine === 'ultraviolet' ? 'scramjet' : 'ultraviolet';
+            writeStorage('ProxyEngine', nextEngine);
+            const engineSelect = document.getElementById('setting-proxy-engine');
+            if (engineSelect) engineSelect.value = nextEngine;
+            const activeTab = this.tabs.find((t) => t.id === this.activeTabId);
+            if (activeTab && activeTab.isLoaded && activeTab.url) {
+              this.navigateTab(this.activeTabId, activeTab.url);
+            }
+          });
 
         // Keyboard shortcuts
         window.addEventListener('keydown', (e) => {
@@ -940,6 +1023,14 @@ const preparePage = async () => {
             if (this.activeTabId) {
               e.preventDefault();
               this.closeTab(this.activeTabId);
+            }
+          } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'r') {
+            if (this.activeTabId) {
+              const activeTab = this.tabs.find((t) => t.id === this.activeTabId);
+              if (activeTab && activeTab.isLoaded) {
+                e.preventDefault();
+                this.reload();
+              }
             }
           }
         });
@@ -1093,6 +1184,12 @@ const preparePage = async () => {
         if (this.activeTabId === tabId) {
           if (this.backBtn) this.backBtn.disabled = !tab.isLoaded;
           if (this.forwardBtn) this.forwardBtn.disabled = !tab.isLoaded;
+          const lockIcon = document.getElementById('omnibar-lock-icon');
+          if (lockIcon) {
+            lockIcon.className = tab.isLoaded
+              ? 'fas fa-lock omnibar-search-icon'
+              : 'fas fa-search omnibar-search-icon';
+          }
         }
       }
 
@@ -1135,22 +1232,13 @@ const preparePage = async () => {
         viewportEl.innerHTML = `
           <div class="tab-home-screen">
             <div class="tab-home-content">
-              <div class="tab-home-logo">
-                <div class="tab-home-brand-mark">
-                  <i class="fas fa-layer-group"></i>
-                </div>
-                <div class="tab-home-title-wrap">
-                  <h1 class="tab-home-title">{{mask}}{{Portal}}</h1>
-                  <p class="tab-home-tagline">{{mask}}{{Private, lightweight, and unrestricted web browser.}}</p>
-                </div>
-              </div>
               <div class="tab-home-search-box">
                 <div class="tab-home-search-inner">
                   <i class="fas fa-search tab-home-search-icon"></i>
                   <input
                     type="text"
                     class="tab-home-search-input"
-                    placeholder="Search or enter web address..."
+                    placeholder="Search DuckDuckGo or type a URL"
                     autocomplete="off"
                     spellcheck="false"
                   />
@@ -1161,50 +1249,45 @@ const preparePage = async () => {
                 </div>
               </div>
               <div class="shortcuts-section">
-                <div class="shortcuts-title">Quick Access</div>
                 <div class="shortcuts-grid">
-                  <div class="shortcut-card" data-url="https://google.com">
-                    <div class="shortcut-icon" style="background: rgba(66, 133, 244, 0.15); color: #4285f4;"><i class="fab fa-google"></i></div>
-                    <span class="shortcut-label">Google</span>
+                  <div class="shortcut-card" data-url="https://duckduckgo.com">
+                    <div class="shortcut-icon"><i class="fas fa-search"></i></div>
+                    <span class="shortcut-label">DuckDuckGo</span>
                   </div>
-                  <div class="shortcut-card" data-url="https://youtube.com">
-                    <div class="shortcut-icon" style="background: rgba(255, 68, 68, 0.15); color: #ff4444;"><i class="fab fa-youtube"></i></div>
-                    <span class="shortcut-label">YouTube</span>
-                  </div>
-                  <div class="shortcut-card" data-url="https://discord.com/app">
-                    <div class="shortcut-icon" style="background: rgba(88, 101, 242, 0.15); color: #5865f2;"><i class="fab fa-discord"></i></div>
-                    <span class="shortcut-label">Discord</span>
-                  </div>
-                  <div class="shortcut-card" data-url="https://chat.openai.com">
-                    <div class="shortcut-icon" style="background: rgba(16, 163, 127, 0.15); color: #10a37f;"><i class="fas fa-robot"></i></div>
-                    <span class="shortcut-label">ChatGPT</span>
-                  </div>
-                  <div class="shortcut-card" data-url="https://open.spotify.com">
-                    <div class="shortcut-icon" style="background: rgba(30, 215, 96, 0.15); color: #1ed760;"><i class="fab fa-spotify"></i></div>
-                    <span class="shortcut-label">Spotify</span>
-                  </div>
-                  <div class="shortcut-card" data-url="https://reddit.com">
-                    <div class="shortcut-icon" style="background: rgba(255, 69, 0, 0.15); color: #ff4500;"><i class="fab fa-reddit"></i></div>
-                    <span class="shortcut-label">Reddit</span>
-                  </div>
-                  <div class="shortcut-card" data-url="https://tiktok.com">
-                    <div class="shortcut-icon" style="background: rgba(255, 0, 80, 0.15); color: #ff0050;"><i class="fab fa-tiktok"></i></div>
-                    <span class="shortcut-label">TikTok</span>
-                  </div>
-                  <div class="shortcut-card" data-url="https://twitch.tv">
-                    <div class="shortcut-icon" style="background: rgba(145, 70, 255, 0.15); color: #9146ff;"><i class="fab fa-twitch"></i></div>
-                    <span class="shortcut-label">Twitch</span>
-                  </div>
-                  <div class="shortcut-card" data-url="https://github.com">
-                    <div class="shortcut-icon" style="background: rgba(255, 255, 255, 0.1); color: #e2e4e9;"><i class="fab fa-github"></i></div>
-                    <span class="shortcut-label">GitHub</span>
+                  <div class="shortcut-card" data-url="https://search.brave.com">
+                    <div class="shortcut-icon"><i class="fas fa-shield-alt"></i></div>
+                    <span class="shortcut-label">Brave Search</span>
                   </div>
                   <div class="shortcut-card" data-url="https://wikipedia.org">
-                    <div class="shortcut-icon" style="background: rgba(136, 192, 208, 0.15); color: #88c0d0;"><i class="fab fa-wikipedia-w"></i></div>
+                    <div class="shortcut-icon"><i class="fab fa-wikipedia-w"></i></div>
                     <span class="shortcut-label">Wikipedia</span>
                   </div>
+                  <div class="shortcut-card" data-url="https://youtube.com">
+                    <div class="shortcut-icon"><i class="fab fa-youtube"></i></div>
+                    <span class="shortcut-label">YouTube</span>
+                  </div>
+                  <div class="shortcut-card" data-url="https://reddit.com">
+                    <div class="shortcut-icon"><i class="fab fa-reddit"></i></div>
+                    <span class="shortcut-label">Reddit</span>
+                  </div>
+                  <div class="shortcut-card" data-url="https://github.com">
+                    <div class="shortcut-icon"><i class="fab fa-github"></i></div>
+                    <span class="shortcut-label">GitHub</span>
+                  </div>
+                  <div class="shortcut-card" data-url="https://discord.com/app">
+                    <div class="shortcut-icon"><i class="fab fa-discord"></i></div>
+                    <span class="shortcut-label">Discord</span>
+                  </div>
+                  <div class="shortcut-card" data-url="https://twitch.tv">
+                    <div class="shortcut-icon"><i class="fab fa-twitch"></i></div>
+                    <span class="shortcut-label">Twitch</span>
+                  </div>
+                  <div class="shortcut-card" data-url="https://open.spotify.com">
+                    <div class="shortcut-icon"><i class="fab fa-spotify"></i></div>
+                    <span class="shortcut-label">Spotify</span>
+                  </div>
                   <div class="shortcut-card" data-url="https://fmhy.net">
-                    <div class="shortcut-icon" style="background: rgba(235, 203, 139, 0.15); color: #ebcb8b;"><i class="fas fa-star"></i></div>
+                    <div class="shortcut-icon"><i class="fas fa-compass"></i></div>
                     <span class="shortcut-label">FMHY</span>
                   </div>
                 </div>
@@ -1355,7 +1438,7 @@ const preparePage = async () => {
           const u = new URL(targetUrl);
           displayTitle =
             u.origin === location.origin
-              ? u.pathname.replace(/^\/archive\/g\//, '').replace(/\/$/, '') || 'Portal'
+              ? u.pathname.replace(/^\/archive\/g\//, '').replace(/\/$/, '') || 'New Tab'
               : u.hostname.replace(/^www\./, '');
         } catch {}
 
@@ -1367,8 +1450,14 @@ const preparePage = async () => {
           if (titleSpan) titleSpan.textContent = displayTitle;
         }
 
-        if (this.activeTabId === tabId && this.addressInput) {
-          this.addressInput.value = rawQuery;
+        if (this.activeTabId === tabId) {
+          if (this.addressInput) {
+            this.addressInput.value = rawQuery;
+          }
+          const lockIcon = document.getElementById('omnibar-lock-icon');
+          if (lockIcon) {
+            lockIcon.className = 'fas fa-lock omnibar-search-icon';
+          }
         }
 
         const homeScreen = viewportEl.querySelector('.tab-home-screen');
@@ -1391,12 +1480,53 @@ const preparePage = async () => {
           hideLoader();
           this.syncTabFromFrame(tabId);
 
-          // Listen for pushState/popstate and link clicks within the frame
+          // Listen for pushState/popstate, window.open, and bare client recovery within the frame
           try {
             const cw = frame.contentWindow;
+            const cd = frame.contentDocument || cw?.document;
+            if (cd) {
+              const errTrace = cd.getElementById('errorTrace');
+              if (
+                errTrace &&
+                errTrace.textContent &&
+                errTrace.textContent.includes('there are no bare clients') &&
+                !frame._retriedBareClients
+              ) {
+                frame._retriedBareClients = true;
+                if (typeof window.$ensureBareMux === 'function') {
+                  window.$ensureBareMux(true).finally(() => {
+                    setTimeout(() => {
+                      try {
+                        cw.location.reload();
+                      } catch {
+                        frame.src = frame.src;
+                      }
+                    }, 300);
+                  });
+                }
+                return;
+              }
+            }
+
             if (cw) {
+              frame._retriedBareClients = false;
               cw.addEventListener('popstate', () => this.syncTabFromFrame(tabId));
               cw.addEventListener('hashchange', () => this.syncTabFromFrame(tabId));
+
+              if (!cw._invisiOpenHooked) {
+                cw._invisiOpenHooked = true;
+                const origOpen = cw.open;
+                cw.open = (openUrl, target, features) => {
+                  if (openUrl && typeof openUrl === 'string' && openUrl !== 'about:blank') {
+                    try {
+                      const decoded = this.decodeProxyUrl(openUrl) || openUrl;
+                      this.createTab(decoded);
+                      return null;
+                    } catch {}
+                  }
+                  return origOpen ? origOpen.call(cw, openUrl, target, features) : null;
+                };
+              }
 
               if (cw.history && !cw.history._portalHooked) {
                 cw.history._portalHooked = true;
@@ -1417,7 +1547,7 @@ const preparePage = async () => {
           } catch (e) {}
         };
 
-        const doNav = () => {
+        const doNav = async () => {
           // 1. Local origin paths (e.g. /archive/g/..., /webretro, /flash) load directly
           if (
             targetUrl.startsWith('about:') ||
@@ -1427,6 +1557,19 @@ const preparePage = async () => {
             frame.src = targetUrl;
             return;
           }
+
+          // Ensure BareMux transport and Service Workers are active before navigating
+          try {
+            if (window.$invisiProxyReadyPromise) {
+              await Promise.race([
+                window.$invisiProxyReadyPromise,
+                new Promise((r) => setTimeout(r, 3500)),
+              ]);
+            }
+            if (typeof window.$ensureBareMux === 'function') {
+              await window.$ensureBareMux();
+            }
+          } catch (e) {}
 
           // 2. External sites: Route through Ultraviolet or Scramjet
           const proxyEngine = readStorage('ProxyEngine') || 'ultraviolet';
@@ -1480,17 +1623,7 @@ const preparePage = async () => {
           frame.src = location.origin + uvPrefix + uvEncode(targetUrl);
         };
 
-        if (
-          window.$invisiScramjet?.ready ||
-          typeof uvConfig !== 'undefined' ||
-          typeof Ultraviolet !== 'undefined' ||
-          targetUrl.startsWith(location.origin)
-        ) {
-          doNav();
-        } else {
-          window.addEventListener('s-ready', doNav, { once: true });
-          setTimeout(doNav, 1000);
-        }
+        doNav();
       }
 
       goBack() {
@@ -1523,6 +1656,15 @@ const preparePage = async () => {
         const loader = viewportEl?.querySelector('.tab-frame-loader');
         if (frame) {
           loader?.classList.add('active');
+          if (typeof window.$ensureBareMux === 'function') {
+            window.$ensureBareMux();
+          }
+          try {
+            if (frame.contentWindow && frame.src && frame.src !== 'about:blank') {
+              frame.contentWindow.location.reload();
+              return;
+            }
+          } catch {}
           frame.src = frame.src;
         }
       }
@@ -1541,6 +1683,10 @@ const preparePage = async () => {
         if (titleSpan) titleSpan.textContent = 'New Tab';
 
         if (this.addressInput) this.addressInput.value = '';
+        const lockIcon = document.getElementById('omnibar-lock-icon');
+        if (lockIcon) {
+          lockIcon.className = 'fas fa-search omnibar-search-icon';
+        }
 
         const homeScreen = viewportEl.querySelector('.tab-home-screen');
         const frameContainer = viewportEl.querySelector('.tab-frame-container');
@@ -1585,6 +1731,9 @@ const preparePage = async () => {
         buttons.apps?.addEventListener('click', () => showView('apps'));
         document
           .getElementById('brand-home-btn')
+          ?.addEventListener('click', () => showView('browser'));
+        document
+          .getElementById('apps-back-btn')
           ?.addEventListener('click', () => showView('browser'));
 
         this.showView = showView;
@@ -1881,6 +2030,61 @@ const preparePage = async () => {
             openBlankCloak();
           });
 
+        // Wire up Settings Modal controls to localStorage & live state
+        const searchSelect = document.getElementById('setting-search-engine');
+        const proxySelect = document.getElementById('setting-proxy-engine');
+        const transportSelect = document.getElementById('setting-wisp-transport');
+        const autocompleteSelect = document.getElementById('setting-use-autocomplete');
+        const hideAdsSelect = document.getElementById('setting-hide-ads');
+
+        const syncSettingsUI = () => {
+          const savedSearch = readStorage('SearchEngine') || '{{DuckDuckGo}}';
+          const savedProxy = readStorage('ProxyEngine') || 'ultraviolet';
+          const savedTransport = readStorage('Transport') || 'epoxy';
+          const savedAuto = readStorage('UseAutocomplete') || 'yes';
+          const savedAds = readStorage('HideAds') || 'on';
+
+          if (searchSelect) searchSelect.value = savedSearch;
+          if (proxySelect) proxySelect.value = savedProxy;
+          if (transportSelect) transportSelect.value = savedTransport;
+          if (autocompleteSelect) autocompleteSelect.value = savedAuto;
+          if (hideAdsSelect) hideAdsSelect.value = savedAds;
+
+          const cleanEngineName = savedSearch.replace(/^\{\{|\}\}$/g, '') || 'DuckDuckGo';
+          if (this.addressInput) {
+            this.addressInput.placeholder = `Search ${cleanEngineName} or type a URL`;
+          }
+          document.querySelectorAll('.tab-home-search-input').forEach((inp) => {
+            inp.placeholder = `Search ${cleanEngineName} or type a URL`;
+          });
+        };
+
+        syncSettingsUI();
+
+        searchSelect?.addEventListener('change', (e) => {
+          writeStorage('SearchEngine', e.target.value);
+          syncSettingsUI();
+        });
+
+        proxySelect?.addEventListener('change', (e) => {
+          writeStorage('ProxyEngine', e.target.value);
+        });
+
+        transportSelect?.addEventListener('change', (e) => {
+          writeStorage('Transport', e.target.value);
+          if (typeof window.$ensureBareMux === 'function') {
+            window.$ensureBareMux(true);
+          }
+        });
+
+        autocompleteSelect?.addEventListener('change', (e) => {
+          writeStorage('UseAutocomplete', e.target.value);
+        });
+
+        hideAdsSelect?.addEventListener('change', (e) => {
+          writeStorage('HideAds', e.target.value);
+        });
+
         // Cloak presets
         const cloakPresetSelect = document.getElementById(
           'setting-cloak-preset'
@@ -1890,6 +2094,10 @@ const preparePage = async () => {
         const applyCloakBtn = document.getElementById('btn-apply-cloak');
 
         const presets = {
+          default: {
+            title: 'New Tab',
+            icon: '/favicon.ico',
+          },
           'google-classroom': {
             title: 'Home',
             icon: 'https://ssl.gstatic.com/classroom/favicon.png',

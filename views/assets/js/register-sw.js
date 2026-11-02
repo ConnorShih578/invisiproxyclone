@@ -19,9 +19,17 @@
     transports = {
       '{{epoxy}}': '{{route}}{{/epoxy/index.mjs}}',
       '{{libcurl}}': '{{route}}{{/libcurl/index.mjs}}',
+      epoxy: '{{route}}{{/epoxy/index.mjs}}',
+      libcurl: '{{route}}{{/libcurl/index.mjs}}',
     },
     storageId = '{{hu-lts}}-storage',
-    storageObject = () => JSON.parse(localStorage.getItem(storageId)) || {},
+    storageObject = () => {
+      try {
+        return JSON.parse(localStorage.getItem(storageId)) || {};
+      } catch {
+        return {};
+      }
+    },
     readStorage = (name) => storageObject()[name],
     defaultMode = '{{epoxy}}';
 
@@ -29,7 +37,8 @@
   Object.freeze(transports);
 
   const getTransportSelection = () => {
-    const url = transports[readStorage('Transport')] || transports.default;
+    const stored = readStorage('Transport');
+    const url = transports[stored] || transports.default;
     const options = { wisp: wispUrl };
     if ('string' === typeof readStorage('UseSocks5'))
       options.proxy = proxyUrl[readStorage('UseSocks5')];
@@ -37,6 +46,80 @@
   };
 
   const swVariant = () => (readStorage('HideAds') !== false ? 1 : 0);
+
+  let baremuxInstance = null;
+  let baremuxInitPromise = null;
+
+  const ensureBareMuxTransport = async (force = false) => {
+    if (typeof BareMux === 'undefined') return false;
+    if (baremuxInitPromise && !force) return baremuxInitPromise;
+
+    baremuxInitPromise = (async () => {
+      try {
+        if (!baremuxInstance) {
+          baremuxInstance = new BareMux.BareMuxConnection(
+            '{{route}}{{/baremux/worker.js}}'
+          );
+        }
+        const { url: transportUrl, options: transportOptions } =
+          getTransportSelection();
+
+        let currentTransport = null;
+        if (!force) {
+          try {
+            currentTransport = await Promise.race([
+              baremuxInstance.getTransport(),
+              new Promise((r) => setTimeout(() => r(null), 600)),
+            ]);
+          } catch {
+            currentTransport = null;
+          }
+        }
+
+        if (!currentTransport || force) {
+          try {
+            await baremuxInstance.setTransport(transportUrl, [transportOptions]);
+          } catch (primaryErr) {
+            const fallbackUrl =
+              transportUrl === transports['{{epoxy}}']
+                ? transports['{{libcurl}}']
+                : transports['{{epoxy}}'];
+            await baremuxInstance.setTransport(fallbackUrl, [transportOptions]);
+          }
+        }
+
+        window.$invisiBareMux = baremuxInstance;
+        window.$invisiBareReady = true;
+        return true;
+      } catch (err) {
+        console.warn('BareMux setup error:', err);
+        baremuxInitPromise = null;
+        return false;
+      }
+    })();
+
+    return baremuxInitPromise;
+  };
+
+  window.$ensureBareMux = ensureBareMuxTransport;
+
+  // Listen for BareMux BroadcastChannel refresh requests and ServiceWorker recovery messages
+  try {
+    const bmChannel = new BroadcastChannel('bare-mux');
+    bmChannel.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'refreshPort') {
+        ensureBareMuxTransport(true);
+      }
+    });
+  } catch {}
+
+  if (navigator.serviceWorker) {
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data && event.data.msg === 'ensureBareMux') {
+        ensureBareMuxTransport(true);
+      }
+    });
+  }
 
   const unregisterStaleSWs = async () => {
     const expected = [swRoutes.sj[swVariant()], swRoutes.uv[swVariant()]].map(
@@ -47,6 +130,27 @@
       if (active && !expected.includes(new URL(active.scriptURL).pathname))
         await registration.unregister();
     }
+  };
+
+  const waitForSwActive = async (registration, timeoutMs = 5000) => {
+    if (!registration) return;
+    if (registration.active) return registration;
+    const worker = registration.installing || registration.waiting;
+    if (!worker) return registration;
+    await new Promise((resolve) => {
+      const onState = () => {
+        if (worker.state === 'activated' || worker.state === 'redundant') {
+          worker.removeEventListener('statechange', onState);
+          resolve();
+        }
+      };
+      worker.addEventListener('statechange', onState);
+      setTimeout(() => {
+        worker.removeEventListener('statechange', onState);
+        resolve();
+      }, timeoutMs);
+    });
+    return registration;
   };
 
   const registerScramjetSW = async () => {
@@ -62,11 +166,11 @@
     await unregisterStaleSWs();
 
     const sw = swRoutes.sj[swVariant()];
-    console.log('Registering Scramjet service worker:', sw);
     const registration = await navigator.serviceWorker.register(sw, {
       scope: swScope,
     });
 
+    await waitForSwActive(registration, 5000);
     await navigator.serviceWorker.ready;
     if (!navigator.serviceWorker.controller) {
       await new Promise((resolve) => {
@@ -82,7 +186,7 @@
           onChange,
           { once: true }
         );
-        setTimeout(resolve, 5000);
+        setTimeout(resolve, 3500);
       });
     }
 
@@ -91,7 +195,16 @@
 
   const buildScramjetTransport = async () => {
     const { url, options } = getTransportSelection();
-    const mod = await import(url);
+    let mod;
+    try {
+      mod = await import(url);
+    } catch {
+      const fallbackUrl =
+        url === transports['{{epoxy}}']
+          ? transports['{{libcurl}}']
+          : transports['{{epoxy}}'];
+      mod = await import(fallbackUrl);
+    }
     const TransportClient = mod.default;
     const transport = new TransportClient(options);
     if (typeof transport.init === 'function') await transport.init();
@@ -131,6 +244,7 @@
   const initialize = async () => {
     try {
       if (window.$invisiScramjet?.ready) {
+        await ensureBareMuxTransport();
         const existing = window.$invisiScramjet;
         const visibleFrame = document.getElementById('frame');
         if (
@@ -140,32 +254,36 @@
           existing.frame = existing.controller.createFrame(visibleFrame, {
             plugins: buildFramePlugins(),
           });
-        } 
+        }
         window.dispatchEvent(new Event('s-ready'));
         return;
       }
 
-      const { url: transportUrl, options: transportOptions } =
-        getTransportSelection();
-      console.log('Using proxy:', transportOptions.proxy);
-      console.log('Transport mode:', transportUrl);
+      // 1. Initialize BareMux and Ultraviolet SW first so UV and BareClient are always ready
+      await ensureBareMuxTransport(true);
 
-      if (typeof BareMux !== 'undefined')
+      if (navigator.serviceWorker) {
         try {
-          const baremux = new BareMux.BareMuxConnection(
-            '{{route}}{{/baremux/worker.js}}'
+          const uvReg = await navigator.serviceWorker.register(
+            swRoutes.uv[swVariant()],
+            { scope: uvSwScope }
           );
-          await baremux.setTransport(transportUrl, [transportOptions]);
-          await navigator.serviceWorker.register(swRoutes.uv[swVariant()], {
-            scope: uvSwScope,
-          });
-          console.log('Ultraviolet service worker registered');
+          await waitForSwActive(uvReg, 5000);
+          window.$invisiUvReady = true;
+          window.dispatchEvent(new Event('uv-ready'));
         } catch (err) {
-          console.warn(
-            'BareMux setup failed',
-            err
-          );
+          console.warn('Ultraviolet SW registration failed:', err);
         }
+      }
+
+      // 2. Register Scramjet SW and Controller if Scramjet scripts are present on the page
+      if (
+        typeof $scramjetController === 'undefined' ||
+        typeof $scramjet === 'undefined'
+      ) {
+        window.dispatchEvent(new Event('s-ready'));
+        return;
+      }
 
       const registration = await registerScramjetSW();
 
@@ -201,16 +319,11 @@
         new Promise((_, reject) =>
           setTimeout(
             () =>
-              reject(
-                new Error(
-                  'Scramjet controller handshake timed out'
-                )
-              ),
+              reject(new Error('Scramjet controller handshake timed out')),
             15000
           )
         ),
       ]);
-      console.log('Scramjet controller initialized');
 
       const visibleFrame = document.getElementById('frame');
       let frame;
@@ -231,14 +344,12 @@
       window.$invisiScramjet = { controller, frame, ready: true };
       window.dispatchEvent(new Event('s-ready'));
     } catch (err) {
-      console.error(
-        'Scramjet initialization failed',
-        err
-      );
+      console.warn('Scramjet initialization error:', err);
       window.$invisiScramjetError = err;
       window.dispatchEvent(new CustomEvent('s-error', { detail: err }));
+      window.dispatchEvent(new Event('s-ready'));
     }
   };
 
-  initialize();
+  window.$invisiProxyReadyPromise = initialize();
 })();

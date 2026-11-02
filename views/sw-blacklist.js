@@ -1,5 +1,13 @@
 importScripts('{{route}}{{/scram/controller.sw.js}}');
 
+self.addEventListener('install', () => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 const SJ_CONTROLLER_PREFIX = '{{route}}{{/scram/network/}}';
 
 const blacklist = new Set();
@@ -44,7 +52,7 @@ self.addEventListener('fetch', (event) => {
       if ($scramjetController.shouldRoute(event)) {
         const hostname = targetHostnameForScramjet(event.request.url);
         if (isBlacklistedDomain(hostname))
-          return new Response(new Blob(), { status: 406 });
+          return new Response('', { status: 204 });
         return $scramjetController.route(event);
       }
 

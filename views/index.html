@@ -10,37 +10,21 @@
       content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"
     />
     <meta name="author" content="TitaniumNetwork" />
-    <meta name="application-name" content="Portal" />
+    <meta name="application-name" content="New Tab" />
     <link rel="canonical" href="https://invisiproxy.com/" />
     }}
-    <title>{{mask}}{{Portal | Web Gateway}}</title>
+    <title>New Tab</title>
     {{ifSEO}}{{
     <meta
       name="description"
-      content="Portal is a fast, lightweight private web browser and proxy for unrestricted internet access and games."
+      content="Web browser new tab page."
     />
-    <meta
-      name="keywords"
-      content="web proxy, private browser, unblocked games, browser in browser, web gateway"
-    />
-    <meta property="og:site_name" content="Portal" />
+    <meta property="og:site_name" content="New Tab" />
     <meta property="og:url" content="https://invisiproxy.com/" />
-    <meta
-      property="og:title"
-      content="Portal | Web Gateway"
-    />
+    <meta property="og:title" content="New Tab" />
     <meta property="og:type" content="website" />
-    <meta
-      property="og:description"
-      content="Enjoy seamless private web browsing with multi-tab navigation, search, and curated web apps and games."
-    />
     }}
-    <meta property="og:image" content="{{route}}{{assets/img/hero.webp}}" />
-    <meta
-      property="og:image:secure_url"
-      content="{{route}}{{assets/img/hero.webp}}"
-    />
-    <meta name="msapplication-TileColor" content="#b4213b" />
+    <meta name="msapplication-TileColor" content="#202124" />
     <meta
       name="msapplication-TileImage"
       content="{{route}}{{assets/ico/ms-icon-144x144.png}}"
@@ -73,7 +57,7 @@
     <script src="{{route}}{{assets/js/csel.js}}{{inline}}" defer></script>
     <script src="{{route}}{{assets/js/common.js}}{{inline}}" defer></script>
     }}
-    <link rel="mask-icon" href="{{route}}{{new.svg}}" color="#88c0d0" />
+    <link rel="mask-icon" href="{{route}}{{new.svg}}" color="#8ab4f8" />
     <link rel="manifest" href="{{route}}{{manifest.json}}" />
     <meta name="mobile-web-app-capable" content="yes" />
   </head>
@@ -82,64 +66,10 @@
     <!-- IMPORTANT-IVINSERT-DONOTDELETE -->
     <!--ANTI-EXFIL-->
     <div id="consumer-app-root">
-      <!-- Top Navigation Bar -->
-      <header class="consumer-header">
-        <div class="consumer-brand" id="brand-home-btn" title="Portal">
-          <div class="consumer-brand-mark">
-            <i class="fas fa-layer-group"></i>
-          </div>
-          <div class="consumer-brand-text-wrap">
-            <span class="consumer-brand-text">{{mask}}{{Portal}}</span>
-            <span class="consumer-brand-sub">{{mask}}{{Web Gateway}}</span>
-          </div>
-        </div>
-
-        <!-- Mode Switcher -->
-        <nav class="consumer-nav-pills" aria-label="Main App Views">
-          <button class="consumer-nav-btn active" id="nav-btn-browser">
-            <i class="fas fa-compass"></i>
-            <span>{{mask}}{{Browser}}</span>
-          </button>
-          <button class="consumer-nav-btn" id="nav-btn-games">
-            <i class="fas fa-gamepad"></i>
-            <span>{{mask}}{{Games}}</span>
-          </button>
-          <button class="consumer-nav-btn" id="nav-btn-apps">
-            <i class="fas fa-th-large"></i>
-            <span>{{mask}}{{Apps}}</span>
-          </button>
-        </nav>
-
-        <!-- Action Utilities -->
-        <div class="consumer-top-actions">
-          <button
-            class="consumer-action-btn"
-            id="btn-open-cloak"
-            title="Tab Cloak & Stealth"
-          >
-            <i class="fas fa-mask"></i>
-          </button>
-          <button
-            class="consumer-action-btn"
-            id="btn-open-settings"
-            title="Settings"
-          >
-            <i class="fas fa-cog"></i>
-          </button>
-          <button
-            class="consumer-action-btn"
-            id="btn-open-license"
-            title="About & AGPL License"
-          >
-            <i class="fas fa-info-circle"></i>
-          </button>
-        </div>
-      </header>
-
-      <!-- View 1: Browser Inside Browser -->
+      <!-- View 1: Pure Chromium Browser Shell -->
       <main class="consumer-view active" id="browser-view">
         <div class="browser-shell">
-          <!-- Multi-Tab Strip -->
+          <!-- Chromium Multi-Tab Strip -->
           <div class="browser-tabbar-container">
             <div class="browser-tabs" id="browser-tabs-list">
               <!-- Tabs dynamically injected here -->
@@ -147,19 +77,21 @@
             <button
               class="browser-add-tab-btn"
               id="browser-btn-add-tab"
-              title="Add new tab"
+              title="New tab (Ctrl+T)"
+              aria-label="New tab"
             >
               <i class="fas fa-plus"></i>
             </button>
           </div>
 
-          <!-- Omnibar / Address Bar -->
+          <!-- Chromium Navigation Toolbar / Omnibox -->
           <div class="browser-omnibar">
             <div class="omnibar-nav-controls">
               <button
                 class="omnibar-btn"
                 id="browser-btn-back"
-                title="Back"
+                title="Click to go back"
+                aria-label="Back"
                 disabled
               >
                 <i class="fas fa-arrow-left"></i>
@@ -167,7 +99,8 @@
               <button
                 class="omnibar-btn"
                 id="browser-btn-forward"
-                title="Forward"
+                title="Click to go forward"
+                aria-label="Forward"
                 disabled
               >
                 <i class="fas fa-arrow-right"></i>
@@ -175,53 +108,128 @@
               <button
                 class="omnibar-btn"
                 id="browser-btn-reload"
-                title="Reload"
+                title="Reload this page"
+                aria-label="Reload"
               >
                 <i class="fas fa-redo-alt"></i>
               </button>
               <button
                 class="omnibar-btn"
                 id="browser-btn-home"
-                title="New Tab Start Page"
+                title="Open the home page"
+                aria-label="Home"
               >
                 <i class="fas fa-home"></i>
               </button>
             </div>
 
-            <!-- Search / URL Input Box -->
+            <!-- Chromium Pill Omnibox -->
             <div class="omnibar-search-wrap">
-              <i class="fas fa-search omnibar-search-icon"></i>
+              <i class="fas fa-search omnibar-search-icon" id="omnibar-lock-icon"></i>
               <input
                 type="text"
                 class="omnibar-input"
                 id="browser-address-input"
-                placeholder="Search or enter web address..."
+                placeholder="Search DuckDuckGo or type a URL"
                 autocomplete="off"
                 spellcheck="false"
               />
-              <button class="omnibar-go-btn" id="browser-btn-go">Go</button>
+              <button class="omnibar-go-btn" id="browser-btn-go" title="Go" aria-label="Go">
+                <i class="fas fa-arrow-right"></i>
+              </button>
               <ul
                 class="omnibar-autocomplete-list"
                 id="browser-autocomplete-list"
               ></ul>
             </div>
 
-            <!-- Utilities -->
-            <div class="omnibar-nav-controls">
+            <!-- Chromium Right-Side Toolbar Actions -->
+            <div class="omnibar-nav-controls omnibar-toolbar-actions">
               <button
                 class="omnibar-btn"
-                id="browser-btn-fullscreen"
-                title="Toggle Fullscreen"
+                id="nav-btn-browser"
+                title="Browser View"
+                style="display: none"
               >
-                <i class="fas fa-expand"></i>
+                <i class="fas fa-globe"></i>
+              </button>
+              <button
+                class="omnibar-btn"
+                id="nav-btn-apps"
+                title="Apps"
+                aria-label="Apps"
+              >
+                <i class="fas fa-th"></i>
+              </button>
+              <button
+                class="omnibar-btn"
+                id="nav-btn-games"
+                title="Library"
+                aria-label="Library"
+              >
+                <i class="fas fa-gamepad"></i>
+              </button>
+              <div class="omnibar-divider"></div>
+              <button
+                class="omnibar-btn"
+                id="btn-open-cloak"
+                title="Tab options"
+                aria-label="Tab options"
+              >
+                <i class="fas fa-user-circle"></i>
               </button>
               <button
                 class="omnibar-btn"
                 id="browser-btn-popout"
-                title="Open in About:Blank"
+                title="Open in new window"
+                aria-label="Open in new window"
               >
                 <i class="fas fa-external-link-alt"></i>
               </button>
+              <button
+                class="omnibar-btn"
+                id="browser-btn-fullscreen"
+                title="Full screen"
+                aria-label="Full screen"
+              >
+                <i class="fas fa-expand"></i>
+              </button>
+              <div class="chromium-menu-wrap">
+                <button
+                  class="omnibar-btn"
+                  id="btn-chromium-menu"
+                  title="Customize and control Chromium"
+                  aria-label="Customize and control Chromium"
+                >
+                  <i class="fas fa-ellipsis-v"></i>
+                </button>
+                <div class="chromium-dropdown-menu" id="chromium-dropdown-menu">
+                  <button class="chromium-menu-item" id="menu-new-tab">
+                    <span>New tab</span>
+                    <span class="chromium-menu-shortcut">Ctrl+T</span>
+                  </button>
+                  <button class="chromium-menu-item" id="menu-new-blank">
+                    <span>New window (about:blank)</span>
+                  </button>
+                  <div class="chromium-menu-sep"></div>
+                  <button class="chromium-menu-item" id="menu-open-apps">
+                    <span>Web Store &amp; Apps</span>
+                  </button>
+                  <button class="chromium-menu-item" id="menu-open-games">
+                    <span>Games Library</span>
+                  </button>
+                  <div class="chromium-menu-sep"></div>
+                  <button class="chromium-menu-item" id="menu-switch-engine">
+                    <span>Switch proxy engine (Retry tab)</span>
+                  </button>
+                  <button class="chromium-menu-item" id="btn-open-settings">
+                    <span>Settings</span>
+                  </button>
+                  <button class="chromium-menu-item" id="btn-open-license">
+                    <span>About Chromium</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -232,27 +240,31 @@
         </div>
       </main>
 
-      <!-- View 2: Games Portal -->
+      <!-- View 2: Games Library (Opened inside Chrome-style page) -->
       <section class="consumer-view" id="games-view">
+        <div class="chromium-subpage-bar">
+          <button class="chromium-back-to-browser" id="brand-home-btn">
+            <i class="fas fa-arrow-left"></i>
+            <span>Back to Browser</span>
+          </button>
+          <span class="chromium-subpage-url">chrome://library</span>
+        </div>
         <div class="games-portal">
           <div class="games-header">
             <div class="games-header-top">
               <div class="games-title-wrap">
-                <h1>{{mask}}{{Unblocked Games Library}}</h1>
-                <p>
-                  {{mask}}{{Play hundreds of web games, retro classics, and
-                  emulators directly in your browser.}}
-                </p>
+                <h1>Library</h1>
+                <p>Launch web games and emulators in a new browser tab.</p>
               </div>
               <div class="games-search-box">
                 <i
                   class="fas fa-search"
-                  style="color: var(--nord3); margin-right: 8px"
+                  style="color: #9aa0a6; margin-right: 8px"
                 ></i>
                 <input
                   type="text"
                   id="games-search-input"
-                  placeholder="Search games..."
+                  placeholder="Search library"
                   autocomplete="off"
                 />
               </div>
@@ -261,16 +273,16 @@
             <!-- Categories -->
             <div class="games-filter-pills" id="games-filters">
               <button class="games-filter-btn active" data-category="all">
-                All Games
+                All
               </button>
               <button class="games-filter-btn" data-category="h5">
-                Web Games
+                HTML5
               </button>
               <button class="games-filter-btn" data-category="emulib">
-                Retro Classics
+                Retro
               </button>
               <button class="games-filter-btn" data-category="flash">
-                Flash Games
+                Flash
               </button>
               <button class="games-filter-btn" data-category="emu">
                 Emulators
@@ -285,15 +297,19 @@
         </div>
       </section>
 
-      <!-- View 3: Apps Portal -->
+      <!-- View 3: Web Applications -->
       <section class="consumer-view" id="apps-view">
+        <div class="chromium-subpage-bar">
+          <button class="chromium-back-to-browser" id="apps-back-btn">
+            <i class="fas fa-arrow-left"></i>
+            <span>Back to Browser</span>
+          </button>
+          <span class="chromium-subpage-url">chrome://apps</span>
+        </div>
         <div class="apps-portal">
           <div class="games-title-wrap">
-            <h1>{{mask}}{{Web Applications}}</h1>
-            <p>
-              {{mask}}{{Quickly launch popular web applications in proxy browser
-              tabs.}}
-            </p>
+            <h1>Apps</h1>
+            <p>Open web applications in a new browser tab.</p>
           </div>
           <div class="apps-grid-container" id="apps-grid">
             <!-- App cards injected via JS -->
@@ -311,69 +327,73 @@
         aria-labelledby="settings-modal-title"
       >
         <div class="consumer-modal-header">
-          <h2 id="settings-modal-title">
-            <i class="fas fa-cog"></i> {{mask}}{{Browser Settings}}
-          </h2>
+          <h2 id="settings-modal-title">Settings</h2>
           <button
             class="consumer-modal-close"
             data-close-modal="settings-modal"
+            aria-label="Close"
           >
             &times;
           </button>
         </div>
         <div class="consumer-modal-body">
           <div class="modal-setting-row">
-            <label>{{mask}}{{Default Search Engine}}</label>
+            <label for="setting-search-engine">Search engine used in the address bar</label>
             <select
               class="modal-select search-engine-list"
               id="setting-search-engine"
             >
-              <option value="Google" selected>{{Google}}</option>
+              <option value="DuckDuckGo" selected>{{DuckDuckGo}} (Recommended - Low Anti-Bot)</option>
+              <option value="Brave">{{Brave}} Search</option>
               <option value="Startpage">{{Startpage}}</option>
-              <option value="DuckDuckGo">{{DuckDuckGo}}</option>
               <option value="Bing">{{Bing}}</option>
-              <option value="Brave">{{Brave}}</option>
+              <option value="Google">{{Google}}</option>
             </select>
           </div>
           <div class="modal-setting-row">
-            <label>{{mask}}{{Proxy Backend Engine}}</label>
+            <label for="setting-proxy-engine">Proxy backend engine</label>
             <select class="modal-select" id="setting-proxy-engine">
-              <option value="scramjet" selected>
-                {{mask}}{{Scramjet v2 (Fastest, Recommended)}}
+              <option value="ultraviolet" selected>
+                Ultraviolet (Most Reliable for CSS/JS)
               </option>
-              <option value="ultraviolet">
-                {{mask}}{{Ultraviolet (Fallback)}}
+              <option value="scramjet">
+                Scramjet v2 (Experimental)
               </option>
             </select>
           </div>
           <div class="modal-setting-row">
-            <label>{{mask}}{{Wisp Transport}}</label>
+            <label for="setting-wisp-transport">Network transport</label>
             <select class="modal-select" id="setting-wisp-transport">
-              <option value="libcurl" selected>
-                {{mask}}{{Libcurl (Secure/Reliable)}}
+              <option value="epoxy" selected>
+                Epoxy TLS (Fastest)
               </option>
-              <option value="epoxy">
-                {{mask}}{{Epoxy (Fastest Chromium)}}
+              <option value="libcurl">
+                Libcurl.js (Compatible)
               </option>
             </select>
           </div>
           <div class="modal-setting-row">
-            <label>{{mask}}{{Search Autocomplete}}</label>
+            <label for="setting-use-autocomplete">Auto-complete searches and URLs</label>
             <select class="modal-select" id="setting-use-autocomplete">
-              <option value="true" selected>
-                {{mask}}{{Enabled (Live Suggestions)}}
-              </option>
-              <option value="false">{{mask}}{{Disabled}}</option>
+              <option value="true" selected>Enabled</option>
+              <option value="false">Disabled</option>
             </select>
           </div>
-          <button class="modal-btn-primary" data-close-modal="settings-modal">
-            <i class="fas fa-check"></i> {{mask}}{{Save Settings}}
+          <div class="modal-setting-row">
+            <label for="setting-hide-ads">Block ads &amp; trackers</label>
+            <select class="modal-select" id="setting-hide-ads">
+              <option value="true" selected>Enabled</option>
+              <option value="false">Disabled (Fixes blocked CDNs)</option>
+            </select>
+          </div>
+          <button class="modal-btn-primary" id="btn-save-settings" data-close-modal="settings-modal">
+            Done
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Modal 2: Cloak & Stealth -->
+    <!-- Modal 2: Cloak & Tab Options -->
     <div class="consumer-modal-backdrop" id="cloak-modal">
       <div
         class="consumer-modal"
@@ -382,69 +402,61 @@
         aria-labelledby="cloak-modal-title"
       >
         <div class="consumer-modal-header">
-          <h2 id="cloak-modal-title">
-            <i class="fas fa-mask"></i> {{mask}}{{Tab Cloak & Stealth}}
-          </h2>
-          <button class="consumer-modal-close" data-close-modal="cloak-modal">
+          <h2 id="cloak-modal-title">Customize Tab Appearance</h2>
+          <button class="consumer-modal-close" data-close-modal="cloak-modal" aria-label="Close">
             &times;
           </button>
         </div>
         <div class="consumer-modal-body">
           <div class="modal-setting-row">
-            <label>{{mask}}{{About:Blank Cloaking}}</label>
+            <label>Open in about:blank window</label>
             <p
-              style="font-size: 0.85rem; color: var(--nord3); margin: 0 0 6px 0"
+              style="font-size: 0.82rem; color: #9aa0a6; margin: 0 0 6px 0"
             >
-              {{mask}}{{Opens the entire proxy browser inside a clean
-              about:blank window to hide history and tabs from extensions.}}
+              Opens the browser inside an about:blank tab.
             </p>
             <button class="modal-btn-primary" id="btn-trigger-blank-cloak">
-              <i class="fas fa-external-link-alt"></i> {{mask}}{{Launch in
-              About:Blank}}
+              Open in about:blank
             </button>
           </div>
           <hr
             style="
               border: 0;
-              border-top: 1px solid rgba(255, 255, 255, 0.08);
-              margin: 10px 0;
+              border-top: 1px solid #3c4043;
+              margin: 8px 0;
             "
           />
           <div class="modal-setting-row">
-            <label>{{mask}}{{Tab Disguise Presets}}</label>
+            <label for="setting-cloak-preset">Tab preset</label>
             <select class="modal-select" id="setting-cloak-preset">
-              <option value="default">{{mask}}{{InvisiProxy (Default)}}</option>
-              <option value="google-classroom">
-                {{mask}}{{Google Classroom}}
-              </option>
-              <option value="google-drive">{{mask}}{{Google Drive}}</option>
-              <option value="google-docs">{{mask}}{{Google Docs}}</option>
-              <option value="canvas">{{mask}}{{Canvas LMS}}</option>
-              <option value="desmos">
-                {{mask}}{{Desmos Graphing Calculator}}
-              </option>
+              <option value="default">New Tab (Default)</option>
+              <option value="google-classroom">Google Classroom</option>
+              <option value="google-drive">Google Drive</option>
+              <option value="google-docs">Google Docs</option>
+              <option value="canvas">Canvas</option>
+              <option value="desmos">Desmos Calculator</option>
             </select>
           </div>
           <div class="modal-setting-row">
-            <label>{{mask}}{{Custom Tab Title}}</label>
+            <label for="custom-cloak-title">Tab title</label>
             <input
               type="text"
               class="modal-input"
               id="custom-cloak-title"
-              placeholder="e.g. Classes"
+              placeholder="New Tab"
             />
           </div>
           <div class="modal-setting-row">
-            <label>{{mask}}{{Custom Tab Icon URL}}</label>
+            <label for="custom-cloak-icon">Favicon URL</label>
             <input
               type="text"
               class="modal-input"
               id="custom-cloak-icon"
-              placeholder="https://ssl.gstatic.com/classroom/favicon.png"
+              placeholder="https://www.google.com/favicon.ico"
             />
           </div>
           <button class="modal-btn-primary" id="btn-apply-cloak">
-            <i class="fas fa-check"></i> {{mask}}{{Apply Cloak}}
+            Apply
           </button>
         </div>
       </div>
@@ -459,34 +471,25 @@
         aria-labelledby="license-modal-title"
       >
         <div class="consumer-modal-header">
-          <h2 id="license-modal-title">
-            <i class="fas fa-info-circle"></i> {{mask}}{{About & Copyright
-            License}}
-          </h2>
-          <button class="consumer-modal-close" data-close-modal="license-modal">
+          <h2 id="license-modal-title">About Chromium</h2>
+          <button class="consumer-modal-close" data-close-modal="license-modal" aria-label="Close">
             &times;
           </button>
         </div>
         <div class="consumer-modal-body">
           <div class="license-box">
-            <h3 style="margin-top: 0; color: #fff">Portal</h3>
+            <h3 style="margin-top: 0; color: #e8eaed; font-size: 1rem">Chromium Web Browser</h3>
             <p>
               <strong>License:</strong> GNU Affero General Public License v3.0
               (AGPL-3.0-only)
             </p>
             <p>
-              <strong>Original Authors & Contributors:</strong> TitaniumNetwork,
+              <strong>Contributors:</strong> TitaniumNetwork,
               QuiteAFancyEmerald, Yoct, b4kt, OlyB, and the open-source
               community.
             </p>
             <p>
-              This software is provided for privacy, research, and censorship
-              evasion under the terms of the GNU AGPL v3.0. You are free to run,
-              copy, distribute, study, and modify this application in compliance
-              with the license.
-            </p>
-            <p>
-              <strong>Powered by:</strong> Scramjet Proxy, Ultraviolet, Epoxy
+              <strong>Powered by:</strong> Ultraviolet, Scramjet, Epoxy
               TLS, Libcurl.js, Bare-Mux, and Mrrowisp.
             </p>
             <p>
@@ -494,13 +497,13 @@
                 href="https://github.com/QuiteAFancyEmerald/InvisiProxy"
                 target="_blank"
                 rel="noopener"
-                style="color: var(--nord8)"
-                >View GitHub Repository & Source Code</a
+                style="color: #8ab4f8"
+                >Source Code Repository</a
               >
             </p>
           </div>
           <button class="modal-btn-primary" data-close-modal="license-modal">
-            {{mask}}{{Close}}
+            Close
           </button>
         </div>
       </div>

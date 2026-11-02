@@ -2,7 +2,7 @@
 <html>
   <head>
     <base href="/" />
-    <title>{{mask}}{{InvisiProxy LTS | Error}}</title>
+    <title>This site can’t be reached</title>
     <meta itemprop="http-status" content="404" />
     {{ifSEO}}{{
     <meta
@@ -11,38 +11,83 @@
     />
     }}
     <!--HEAD-CONTENT-->
-    <script src="https://unpkg.com/tsparticles@3.8.1/tsparticles.bundle.min.js" defer data-module></script>
     {{inline}}{{
     <script src="{{route}}{{assets/js/csel.js}}{{inline}}" defer></script>
     }}
     <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html,
       body {
-        color: #eceff4;
-        background-color: #0d1117;
-        font-family: 'Figtree', sans-serif;
-        font-optical-sizing: auto;
-        background-image:
-          radial-gradient(
-            circle,
-            rgba(131, 131, 131, 0.02) 1px,
-            transparent 1px
-          ),
-          radial-gradient(
-            circle,
-            rgba(148, 148, 148, 0.02) 1px,
-            transparent 1px
-          );
-        background-position:
-          0 0,
-          5px 5px;
-        background-size: 10px 10px;
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background-color: #202124;
+        color: #9aa0a6;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          Helvetica, Arial, sans-serif;
+        font-size: 14px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      #background,
+      #footer {
+        display: none;
+      }
+
+      #mainbody {
+        max-width: 600px;
+        margin: 12vh auto 0;
+        padding: 0 24px;
+      }
+
+      .chrome-err-icon {
+        width: 48px;
+        height: 48px;
+        margin-bottom: 24px;
+        color: #9aa0a6;
       }
 
       h1 {
-        color: #ff5861;
-        font-size: 84px;
-        font-weight: 900;
-        margin-top: 6%;
+        color: #e8eaed;
+        font-size: 24px;
+        font-weight: 500;
+        margin: 0 0 12px;
+      }
+
+      p {
+        margin: 0 0 12px;
+        color: #9aa0a6;
+      }
+
+      .chrome-err-code {
+        font-size: 12px;
+        color: #9aa0a6;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin: 20px 0 28px;
+      }
+
+      .chrome-reload-btn {
+        background-color: #8ab4f8;
+        color: #202124;
+        border: none;
+        border-radius: 4px;
+        padding: 8px 16px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+      }
+
+      .chrome-reload-btn:hover {
+        background-color: #aecbfa;
       }
     </style>
   </head>
@@ -53,24 +98,26 @@
     <div id="background" class="fullwidth"></div>
     <!-- IMPORTANT-IVINSERT-DONOTDELETE -->
     <div id="mainbody" class="fullwidth">
-      <div class="box-error text-center">
-        <h1>{{mask}}{{Site Error!}}</h1>
-        <h2>
-          {{mask}}{{Reload the page or do Ctrl+R!!! This fixes a lot of issues}}
-        </h2>
-        <h2>
-          {{mask}}{{Blame BareMux! There are no bare clients.... reloading the page will resolve this issue.}}
-        </h2>
-        <p>
-          {{mask}}{{Might be doing some maintenance or the web server is down.}}
-        </p>
-        <p>{{mask}}{{In that case wait a bit until it is resolved!}}</p>
-        <br />
-        <p>
-          Invalid URL? View the
-          <a href="{{route}}{{/questions}}" class="bluelink">FAQ page</a> for
-          help!
-        </p>
+      <div class="box-error">
+        <svg
+          class="chrome-err-icon"
+          viewBox="0 0 48 48"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M10 6h20l8 8v28a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" />
+          <polyline points="28 6 28 14 36 14" />
+          <line x1="18" y1="24" x2="22" y2="28" />
+          <line x1="22" y1="24" x2="18" y2="28" />
+          <line x1="26" y1="24" x2="30" y2="28" />
+          <line x1="30" y1="24" x2="26" y2="28" />
+          <path d="M18 36c2-2 10-2 12 0" />
+        </svg>
+        <h1>This page isn’t working</h1>
+        <p>The requested URL could not be retrieved or the connection was interrupted.</p>
+        <div class="chrome-err-code">HTTP ERROR 404</div>
+        <button class="chrome-reload-btn" onclick="location.reload()">Reload</button>
       </div>
     </div>
     <div id="footer" class="fullwidth">

@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
   <head>
-    <title>{{mask}}{{InvisiProxy LTS | Error}}</title>
+    <title>This site can’t be reached</title>
     <meta itemprop="http-status" content="404" />
     {{ifSEO}}{{
     <meta
@@ -10,172 +10,206 @@
     />
     }}
     <!--HEAD-CONTENT-->
-    <link
-      rel="stylesheet"
-      href="https://www.nerdfonts.com/assets/css/webfont.css"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
     <style>
       *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html,
       body {
-        color: #eceff4;
-        background-color: #1d232a;
-        font-family: 'Figtree', sans-serif;
-        font-optical-sizing: auto;
-        background-image:
-          radial-gradient(
-            circle,
-            rgba(131, 131, 131, 0.02) 1px,
-            transparent 1px
-          ),
-          radial-gradient(
-            circle,
-            rgba(148, 148, 148, 0.02) 1px,
-            transparent 1px
-          );
-        background-position:
-          0 0,
-          5px 5px;
-        background-size: 10px 10px;
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background-color: #202124;
+        color: #9aa0a6;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          Helvetica, Arial, sans-serif;
+        font-size: 14px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .chrome-err-page {
+        max-width: 600px;
+        margin: 10vh auto 0;
+        padding: 0 24px;
+      }
+
+      .chrome-err-icon {
+        width: 48px;
+        height: 48px;
+        margin-bottom: 24px;
+        color: #9aa0a6;
       }
 
       h1 {
-        color: #ff5861;
-        font-size: 64px;
-        font-weight: 900;
-        margin-top: 0.8%;
-      }
-
-      code {
-        color: #e5e9f0;
+        color: #e8eaed;
         font-size: 24px;
         font-weight: 500;
+        margin: 0 0 12px;
+      }
+
+      .chrome-err-sub {
+        margin: 0 0 16px;
+        color: #9aa0a6;
+        word-break: break-all;
+      }
+
+      .chrome-err-sub b {
+        color: #e8eaed;
+        font-weight: 500;
+      }
+
+      .chrome-err-list {
+        margin: 0 0 16px;
+        padding-left: 20px;
+      }
+
+      .chrome-err-list li {
+        margin-bottom: 4px;
+      }
+
+      .chrome-err-code {
+        font-size: 12px;
+        color: #9aa0a6;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 28px;
+      }
+
+      .chrome-err-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      button#reload {
+        background-color: #8ab4f8;
+        color: #202124;
+        border: none;
+        border-radius: 4px;
+        padding: 8px 16px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+      }
+
+      button#reload:hover {
+        background-color: #aecbfa;
+      }
+
+      details.chrome-err-details {
+        margin-top: 16px;
+      }
+
+      details.chrome-err-details summary {
+        color: #9aa0a6;
+        cursor: pointer;
+        font-size: 13px;
+        user-select: none;
+        margin-bottom: 10px;
+      }
+
+      textarea#errorTrace {
+        width: 100%;
+        min-height: 120px;
+        background: #292a2d;
+        color: #9aa0a6;
+        border: 1px solid #3c4043;
+        border-radius: 6px;
+        padding: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          monospace;
+        font-size: 12px;
+        resize: vertical;
+        outline: none;
       }
 
       .uv-small {
-        color: #e5e9f0;
-        font-size: 20px;
-        font-weight: 500;
-      }
-
-      i {
-        color: #e5e9f0;
-        font-size: 20px;
-        font-weight: 900;
-        text-decoration: none;
-        font-style: normal;
-      }
-
-      .footer-spacing {
-        margin-top: 0.5%;
-      }
-
-      button {
-        display: inline-block;
-        text-decoration: none;
-        padding: 15px 50px;
-        border-radius: 8px;
-        margin: 10px;
-        margin-top: 20px;
-        transition: 0.3s ease-in-out;
-        -webkit-transition: 0.3s ease-in-out;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        -webkit-backdrop-filter: blur(10px);
-        backdrop-filter: blur(10px);
-      }
-
-      button:hover {
-        background-color: #434c5e;
-      }
-
-      .container {
-        max-width: 650px;
-      }
-
-      .list-group-item {
-        background-color: #2e3440;
-        color: #eceff4;
-      }
-
-      .list-group {
-        border-radius: 18px;
-      }
-
-      textarea {
-        border-radius: 18px;
-        outline: none;
-        resize: none;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        padding: 25px;
-        box-sizing: border-box;
-        width: 450px;
-      }
-
-      .nf-fa-heart {
-        color: #ff5861;
+        display: block;
+        margin-top: 8px;
+        font-size: 11px;
+        color: #5f6368;
       }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js"></script>
   </head>
   <body>
     <!-- IMPORTANT-IVINSERT-DONOTDELETE -->
     <!--ANTI-EXFIL-->
-    <div class="container-fluid text-center">
-      <h1>{{mask}}{{Network Error}}</h1>
-      <code>Failed to load: <b id="fetchedURL"></b></code>
-      <br />
-      <button id="reload">Refresh</button>
-      <br /><br />
-      <h5>
-        <p>
-          <textarea id="errorTrace" cols="40" rows="10" readonly>test</textarea>
-        </p>
-      </h5>
-      <code class="uv-small"
-        >{{mask}}{{Refresh the network service | Ultraviolet v}}<span
-          id="uvVersion"
-        ></span
-        >.</code
+    <div class="chrome-err-page">
+      <svg
+        class="chrome-err-icon"
+        viewBox="0 0 48 48"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
       >
-      <br /><br />
-      <div class="container text-wrap">
-        <ul class="list-group text-start">
-          <li class="list-group-item">
-            {{mask}}{{ - Verifying you entered the correct address }}
-          </li>
-          <li class="list-group-item">
-            {{mask}}{{ - Clearing your browser or site cache data via
-            Ctrl+Shift+R and browser settings }}
-          </li>
-          <li class="list-group-item">
-            {{mask}}{{ - In the case of website maintenance or updates, please
-            wait for the issue to be resolved. }}
-          </li>
-          <li class="list-group-item">
-            {{mask}}{{ - If the issue persists be sure to mention this in the
-            TitaniumNetwork Discord. }}
-          </li>
-          <li class="list-group-item">
-            {{mask}}{{ - View the FAQ page for specific site compatibility
-            issues. }}
-          </li>
-        </ul>
-      </div>
-      <br />
-      <p class="footer-spacing">
-        <i>{{mask}}{{InvisiProxy LTS © 2020-2025 | Made With Love}} </i
-        ><i class="nf nf-fa-heart"></i>
+        <path d="M10 6h20l8 8v28a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" />
+        <polyline points="28 6 28 14 36 14" />
+        <line x1="18" y1="24" x2="22" y2="28" />
+        <line x1="22" y1="24" x2="18" y2="28" />
+        <line x1="26" y1="24" x2="30" y2="28" />
+        <line x1="30" y1="24" x2="26" y2="28" />
+        <path d="M18 36c2-2 10-2 12 0" />
+      </svg>
+
+      <h1>This site can’t be reached</h1>
+      <p class="chrome-err-sub">
+        The webpage at <b id="fetchedURL"></b> might be temporarily down or it
+        may have moved permanently to a new web address.
       </p>
+
+      <ul class="chrome-err-list">
+        <li>Check the address for typing errors.</li>
+        <li>Reload the page to re-establish the connection.</li>
+      </ul>
+
+      <div class="chrome-err-code">ERR_PROXY_CONNECTION_FAILED</div>
+
+      <div class="chrome-err-actions">
+        <button id="reload">Reload</button>
+      </div>
+
+      <details class="chrome-err-details">
+        <summary>Details</summary>
+        <textarea id="errorTrace" cols="40" rows="6" readonly>test</textarea>
+        <code class="uv-small"
+          >Ultraviolet v<span id="uvVersion"></span
+        ></code>
+      </details>
+
       <script src="{{src}}"></script>
+      <script>
+        (function () {
+          try {
+            var traceEl = document.getElementById('errorTrace');
+            var text = traceEl ? traceEl.value || traceEl.textContent || '' : '';
+            if (
+              text.indexOf('there are no bare clients') !== -1 ||
+              text.indexOf('No BareTransport') !== -1
+            ) {
+              var key = 'uv_auto_retry_' + location.pathname;
+              var count = parseInt(sessionStorage.getItem(key) || '0', 10);
+              if (count < 2) {
+                sessionStorage.setItem(key, String(count + 1));
+                try {
+                  if (window.parent && typeof window.parent.$ensureBareMux === 'function') {
+                    window.parent.$ensureBareMux(true);
+                  }
+                } catch (e) {}
+                setTimeout(function () {
+                  location.reload();
+                }, 350);
+              }
+            }
+          } catch (e) {}
+        })();
+      </script>
     </div>
   </body>
 </html>
